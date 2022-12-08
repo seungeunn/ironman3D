@@ -9,11 +9,17 @@ using std::cos;
 using std::sin;
 using std::sqrt;
 
-bool disassemble = false;
+int disassemble = 0;
 int individual = 0;
 int color = 0;
-double radius = 10;
-double theta = 45, phi = 45;
+int houseparty = 0;
+int smartgun = 0;
+int repulsorbeam = 0;
+int unibeam = 0;
+int score[3] = { 5,5,5 };
+
+double radius = 11;
+double theta = 80, phi = 1;
 double cam[3];
 double center[3] = { 0, 0, 0 };
 double up[3] = { 0, cos(phi * M_PI / 180), 0 };
@@ -44,15 +50,19 @@ GLuint blacktexture;
 GLuint pinktexture;
 GLuint bluetexture;
 
-void init();
-void light_default();
-void resize(int, int);
-void setTextureMapping();
-void draw_obj(ObjParser*, GLuint);
 void draw_ironman();
 void setEnvironmentMap();
 void draw_skyBox();
+void housepartyProtocol();
+void smartGun();
+
+void setTextureMapping();
+void draw_obj(ObjParser*, GLuint);
+void init();
+void light_default();
+void resize(int, int);
 void draw();
+void draw_axis();
 void keyboard(unsigned char, int, int);
 void specialkeyboard(int, int, int);
 void mouseWheel(int, int, int, int);
@@ -112,34 +122,34 @@ void light_default() {
 	// lignt0 setting
 	GLfloat ambientLight[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 	GLfloat diffuseLight[] = { 0.9f, 0.9f, 0.9f, 1.0f };
-	GLfloat specularLight[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+	GLfloat specularLight[] = { 0.6f, 0.6f, 0.6f, 1.0f };
 	GLfloat light_position[] = { 0.0, 0.0, 0.0, 1.0 };
 	glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
-	/************* spot position setting ************
-	GLfloat spot_direction[] = { 0.0, 0.0, 0.0, 1.0 };
-	glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 45.0);
-	glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);
-	glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, 2.0);
-	*/
+	/************* spot position setting ************/
+	GLfloat spot_direction[] = { -10.0, 0.0, 0.0, 1.0 };
+	glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 45.0);
+	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spot_direction);
+	glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 20.0);
 
 	/************ Material  setting ************/
-	GLfloat specularMaterial[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+	GLfloat specularMaterial[] = { 0.8f, 0.8f, 0.8f, 1.5f };
 	GLfloat diffuseMaterial[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	GLfloat ambientMaterial[] = { 0.2f, 0.2f, 0.2f, 1.0f };
 	glMaterialfv(GL_FRONT, GL_AMBIENT, ambientMaterial);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuseMaterial);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, specularMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, 30);
+	glMaterialf(GL_FRONT, GL_SHININESS, 32);
 	
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glDisable(GL_COLOR_MATERIAL);
 	
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
+	//glEnable(GL_LIGHT1);
 
 	// depth test enable
 	glEnable(GL_DEPTH_TEST);
@@ -165,7 +175,6 @@ void init() {
 
 	// texture mapping set
 	glEnable(GL_TEXTURE_2D);
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE); //GL_REPLACE, GL_MODULATE
 	gluQuadricTexture(qobj, GL_TRUE);
 	setEnvironmentMap();
 	setTextureMapping();
@@ -188,7 +197,7 @@ void setTextureMapping() {
 	glGenTextures(1, &goldtexture);
 	glBindTexture(GL_TEXTURE_2D, goldtexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); //GL_REPLACE, GL_MODULATE
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -198,7 +207,7 @@ void setTextureMapping() {
 	glGenTextures(1, &silvertexture);
 	glBindTexture(GL_TEXTURE_2D, silvertexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -208,7 +217,7 @@ void setTextureMapping() {
 	glGenTextures(1, &blacktexture);
 	glBindTexture(GL_TEXTURE_2D, blacktexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -218,7 +227,7 @@ void setTextureMapping() {
 	glGenTextures(1, &redtexture);
 	glBindTexture(GL_TEXTURE_2D, redtexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -228,7 +237,7 @@ void setTextureMapping() {
 	glGenTextures(1, &pinktexture);
 	glBindTexture(GL_TEXTURE_2D, pinktexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -238,7 +247,7 @@ void setTextureMapping() {
 	glGenTextures(1, &bluetexture);
 	glBindTexture(GL_TEXTURE_2D, bluetexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -247,12 +256,28 @@ void setTextureMapping() {
 
 void setEnvironmentMap() {
 	int imgWidth, imgHeight, channels;
+	
 	uchar* img0 = readImageData("img/1024px.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img1 = readImageData("img/1024nx.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img2 = readImageData("img/1024py.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img3 = readImageData("img/1024ny.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img4 = readImageData("img/1024pz.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img5 = readImageData("img/1024nz.bmp", &imgWidth, &imgHeight, &channels);
+	/*
+	uchar* img0 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img1 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img2 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img3 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img4 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img5 = readImageData("img/hallofarmor2.bmp", &imgWidth, &imgHeight, &channels);
+	
+	uchar* img0 = readImageData("img/128px.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img1 = readImageData("img/128nx.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img2 = readImageData("img/128py.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img3 = readImageData("img/128ny.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img4 = readImageData("img/128pz.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img5 = readImageData("img/128nz.bmp", &imgWidth, &imgHeight, &channels);
+	*/
 
 	glGenTextures(1, &g_nCubeTex);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, g_nCubeTex);
@@ -313,31 +338,31 @@ void draw_ironman() {
 	glEnable(GL_LIGHT0);
 
 	if (individual == 0) {
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPushMatrix();
 			glTranslatef(0, 1, 1);
 		}
 		draw_obj(face, goldtexture);
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, 0, 1);
 		}
 		draw_obj(arm1gold, goldtexture);
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, 0, 1.5);
 		}
 		draw_obj(arm2, goldtexture);
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, -1, 1);
 		}
 		draw_obj(leg1gold, goldtexture);
 
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, 1, 0);
@@ -347,7 +372,7 @@ void draw_ironman() {
 		else if(color == 10) draw_obj(helmet, pinktexture);
 		else if(color == 11) draw_obj(helmet, bluetexture);
 
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, 0, -1);
@@ -357,7 +382,7 @@ void draw_ironman() {
 		else if (color == 10) draw_obj(body, pinktexture);
 		else if (color == 11) draw_obj(body, bluetexture);
 
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, 0.5, 0.5);
@@ -367,7 +392,7 @@ void draw_ironman() {
 		else if (color == 10) draw_obj(arm1red, pinktexture);
 		else if (color == 11) draw_obj(arm1red, bluetexture);
 
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, 0, 2);
@@ -377,7 +402,7 @@ void draw_ironman() {
 		else if (color == 10) draw_obj(hand, pinktexture);
 		else if (color == 11) draw_obj(hand, bluetexture);
 
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, 0, 0.5);
@@ -387,7 +412,7 @@ void draw_ironman() {
 		else if (color == 10) draw_obj(leg1red, pinktexture);
 		else if (color == 11) draw_obj(leg1red, bluetexture);
 
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, -1, 1.5);
@@ -397,29 +422,29 @@ void draw_ironman() {
 		else if (color == 10) draw_obj(leg2, pinktexture);
 		else if (color == 11) draw_obj(leg2, bluetexture);
 
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, 0, 0.5);
 		}
 		draw_obj(arc, silvertexture);
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, 0, 2);
 		}
 		draw_obj(handarc, silvertexture);
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 		}
 		draw_obj(footarc, silvertexture);
 		draw_obj(sil, silvertexture);
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPushMatrix();
 			glTranslatef(0, 0, 1);
 		}
 		draw_obj(gun, blacktexture);
-		if (disassemble == true) {
+		if (disassemble == 1) {
 			glPopMatrix();
 		}
 	}
@@ -474,7 +499,7 @@ void draw_skyBox() {
 	glDisable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_CUBE_MAP);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, g_nCubeTex);
-	float g_nSkysize = 50;
+	float g_nSkysize = 200;
 	glBegin(GL_QUADS);
 	//px
 	glTexCoord3d(1, -1, -1); glVertex3f(g_nSkysize, -g_nSkysize, -g_nSkysize);
@@ -509,79 +534,276 @@ void draw_skyBox() {
 	glEnd();
 }
 
+void draw_axis() {
+	glLineWidth(2); // 좌표축의 두께
+	glBegin(GL_LINES);
+
+	glColor3f(1, 0, 0); // x축은 red
+	glVertex3f(0, 0, 0);
+	glVertex3f(4, 0, 0);
+
+	glColor3f(0, 1, 0); // y축은 green
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 4, 0);
+
+	glColor3f(0, 0, 1);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 0, 4); // z축은 blue
+
+	glEnd();
+	glColor3f(1, 1, 1);
+	glLineWidth(1); // 두께 다시 환원
+}
+
+void housepartyProtocol() {
+	glPushMatrix();
+		draw_ironman();
+		glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(-5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(-5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(-5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(-5.0f, 0.0f, 0.0f); 
+		draw_ironman();
+	glPopMatrix();
+	glPushMatrix();
+		glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(5.0f, 0.0f, 0.0f);
+		draw_ironman();
+	glPopMatrix();
+	glTranslatef(1.0f, 5.0f, -5.0f);
+	glPushMatrix();
+		draw_ironman();
+		glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(-5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(-5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(-5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(-5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(-5.0f, 0.0f, 0.0f);
+		draw_ironman();
+	glPopMatrix();
+	glPushMatrix();
+		glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(5.0f, 0.0f, 0.0f);
+		draw_ironman();
+		glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
+		glTranslatef(5.0f, 0.0f, 0.0f);
+		draw_ironman();
+	glPopMatrix();
+}
+
+void smartGun() {
+	glDisable(GL_TEXTURE_2D);
+	if (score[0] != 0) {
+		glPushMatrix();
+			glColor3f(1, 0, 0);
+			glPushMatrix();
+			glTranslatef(6.2, 2.5, 11);
+			for (int i = 0; i < score[0]; i++) {
+				glutSolidSphere(0.2, 30, 30);
+				glTranslatef(-0.6, 0, 0);
+			}
+			glPopMatrix();
+		glTranslatef(5, 0, 11);
+		glColor3f(1, 1, 0);
+		glutSolidDodecahedron();
+		glPopMatrix();
+	}
+	if (score[1] != 0) {
+		glPushMatrix();
+			glColor3f(1, 0, 0);
+			glPushMatrix();
+			glTranslatef(-5, 2.6, 13);
+			for (int i = 0; i < score[1]; i++) {
+				glutSolidSphere(0.2, 30, 30);
+				glTranslatef(-0.6, 0, 0);
+			}
+			glPopMatrix();
+		glTranslatef(-7, 0, 15);
+		glColor3f(0, 1, 0);
+		glutSolidTeapot(2);
+		glPopMatrix();
+	}
+	if (score[2] != 0) {
+		glPushMatrix();
+			glColor3f(1, 0, 0);
+			glPushMatrix();
+			glTranslatef(1.2, 3.6, 13);
+			for (int i = 0; i < score[2]; i++) {
+				glutSolidSphere(0.2, 30, 30);
+				glTranslatef(-0.6, 0, 0);
+			}
+			glPopMatrix();
+		glTranslatef(0, 0, 21);
+		glColor3f(0, 0, 1);
+		glutSolidSphere(2, 30, 30);
+		glPopMatrix();
+	}
+	glColor3f(1, 1, 1);
+	glEnable(GL_TEXTURE_2D);
+}
+
 void draw() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-
 	cam[0] = radius * sin(theta * M_PI / 180) * sin(phi * M_PI / 180);
 	cam[1] = radius * cos(theta * M_PI / 180);
 	cam[2] = radius * sin(theta * M_PI / 180) * cos(phi * M_PI / 180);
 	gluLookAt(cam[0], cam[1], cam[2], center[0], center[1], center[2], up[0], up[1], up[2]);
-	
+
 	draw_skyBox();
-	
+
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
 	glDisable(GL_TEXTURE_GEN_R);
 	glDisable(GL_TEXTURE_CUBE_MAP);
 
-	draw_ironman();
+	if (smartgun == 1) {
+		smartGun();
+	}
+
+	if (houseparty == 1 && smartgun == 0) {
+		housepartyProtocol();
+	}
+	else {
+		draw_axis();
+		draw_ironman();
+	}
 
 	glFlush();
 	glutSwapBuffers();
 }
 
 void keyboard(unsigned char key, int x, int y) {
+	if (key == 'R' || key == 'r') {
+		printf("Repulsor Beam mode has been selected\n");
+
+	}
+	else if (key == 'U' || key == 'u') {
+		printf("UniBeam Blast mode has been selected\n");
+		if (unibeam == 0)
+			unibeam = 1;
+		else unibeam = 0;
+
+	}
+	else if (key == 'S' || key == 's') {
+		printf("Smart Gun mode has been selected\n");
+		if (smartgun == 0) {
+			smartgun = 1;
+			radius = 8;
+			theta = 50;
+			phi = 180;
+			center[1] = 4;
+		}
+		else {
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			smartgun = 0;
+			radius = 11;
+			theta = 80;
+			phi = 1;
+			center[1] = 0;
+		}
+	}
+	else if (key == 'H' || key == 'h') {
+		if (smartgun == 0) {
+			printf("House Party Protocol has been selected\n");
+			if (houseparty == 0)
+				houseparty = 1;
+			else houseparty = 0;
+		}
+	} 
 
 	glutPostRedisplay();
 }
 
 void specialkeyboard(int key, int x, int y) {
-	if (key == GLUT_KEY_LEFT) {
-		phi -= 2.5;
-		if (phi < 0) phi = 355;
+	if (smartgun == 0) {
+		if (key == GLUT_KEY_LEFT) {
+			phi -= 2.5;
+			if (phi < 0) phi = 355;
+		}
+		else if (key == GLUT_KEY_RIGHT) {
+			phi += 2.5;
+			if (phi >= 360) phi = 0;
+		}
+		else if (key == GLUT_KEY_UP) {
+			if (theta > 10) theta -= 2.5;
+		}
+		else if (key == GLUT_KEY_DOWN) {
+			if (theta < 170) theta += 2.5;
+		}
+		glutPostRedisplay();
 	}
-	else if (key == GLUT_KEY_RIGHT) {
-		phi += 2.5;
-		if (phi >= 360) phi = 0;
-	}
-	else if (key == GLUT_KEY_UP) {
-		if (theta > 10) theta -= 2.5;
-	}
-	else if (key == GLUT_KEY_DOWN) {
-		if (theta < 170) theta += 2.5;
-	}
-	glutPostRedisplay();
 }
 
 void mouseWheel(int button, int dir, int x, int y) {
-	if (dir > 0) {
-		if (radius > 2) radius--;
+	if (smartgun == 0) {
+		if (dir > 0) {
+			if (radius > 2) radius--;
+		}
+		else {
+			if (radius < 100) radius++;
+		}
+		glutPostRedisplay();
 	}
-	else {
-		if (radius < 100) radius++;
-	}
-	glutPostRedisplay();
 }
 
 void main_menu(int option) {
 	if (option == 99) exit(0);
 	else if (option == 1) {
-		radius = 10;
-		theta = 45; phi = 45;
-		disassemble = false;
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		radius = 11;
+		theta = 80;
+		phi = 1;
+		center[1] = 0;
+		disassemble = 0;
 		individual = 0;
 		color = 0;
+		houseparty = 0;
+		smartgun = 0;
+		repulsorbeam = 0;
+		unibeam = 0;
 		printf("Init has been selected\n");
 	}
 	else if (option == 2) {
-		if (disassemble == false) {
-			disassemble = true;
+		if (disassemble == 0) {
+			disassemble = 1;
 			printf("disassemble has been selected\n");
 		}
 		else {
-			disassemble = false;
+			disassemble = 0;
 			printf("disassemble has been selected\n");
 		}
 	}
@@ -643,11 +865,10 @@ void sub_menu2(int option) {
 void printInstruction() {
 	/* 조작법 console 출력 */
 	printf("\n-----------Keyboard Navigation-----------\n");
-	printf("A/a : Repulsor Beam(Attack)\n");
-	printf("F/f : Repulsor Beam(Fly)\n");
-	printf("U/u : UniBeam Blast\n");
+	printf("R/r : Repulsor Beam mode\n");
+	printf("U/u : UniBeam Blast mode\n");
 	printf("S/s : Smart Gun mode\n");
-	printf("H/h : House Party Protocol\n");
+	printf("H/h : House Party Protocol\n");	
 	printf("방향키 : camera 위치\n");
 
 	printf("\n-----------Mouse Navigation-----------\n");
