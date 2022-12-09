@@ -55,6 +55,7 @@ void setEnvironmentMap();
 void draw_skyBox();
 void housepartyProtocol();
 void smartGun();
+void Picking();
 
 void setTextureMapping();
 void draw_obj(ObjParser*, GLuint);
@@ -66,6 +67,7 @@ void draw_axis();
 void keyboard(unsigned char, int, int);
 void specialkeyboard(int, int, int);
 void mouseWheel(int, int, int, int);
+void mouse(int, int, int, int);
 void sub_menu1(int);
 void sub_menu2(int);
 void main_menu(int);
@@ -105,6 +107,7 @@ int main(int argc, char** argv) {
 
 	// callback function
 	glutMouseWheelFunc(&mouseWheel);
+	glutMouseFunc(&mouse);
 	glutKeyboardFunc(&keyboard);
 	glutSpecialFunc(&specialkeyboard);
 	glutDisplayFunc(&draw);
@@ -636,7 +639,7 @@ void smartGun() {
 			}
 			glPopMatrix();
 		glTranslatef(5, 0, 11);
-		glColor3f(1, 1, 0);
+		glColor3f(1, 1, 0); // yellow
 		glutSolidDodecahedron();
 		glPopMatrix();
 	}
@@ -651,7 +654,7 @@ void smartGun() {
 			}
 			glPopMatrix();
 		glTranslatef(-7, 0, 15);
-		glColor3f(0, 1, 0);
+		glColor3f(0, 1, 0); // green
 		glutSolidTeapot(2);
 		glPopMatrix();
 	}
@@ -666,7 +669,7 @@ void smartGun() {
 			}
 			glPopMatrix();
 		glTranslatef(0, 0, 21);
-		glColor3f(0, 0, 1);
+		glColor3f(0, 0, 1); // blue
 		glutSolidSphere(2, 30, 30);
 		glPopMatrix();
 	}
@@ -698,7 +701,7 @@ void draw() {
 		housepartyProtocol();
 	}
 	else {
-		draw_axis();
+		//draw_axis();
 		draw_ironman();
 	}
 
@@ -708,15 +711,19 @@ void draw() {
 
 void keyboard(unsigned char key, int x, int y) {
 	if (key == 'R' || key == 'r') {
+		if (smartgun == 0) {
+
+		}
 		printf("Repulsor Beam mode has been selected\n");
 
 	}
 	else if (key == 'U' || key == 'u') {
-		printf("UniBeam Blast mode has been selected\n");
-		if (unibeam == 0)
-			unibeam = 1;
-		else unibeam = 0;
-
+		if (smartgun == 0) {
+			printf("UniBeam Blast mode has been selected\n");
+			if (unibeam == 0)
+				unibeam = 1;
+			else unibeam = 0;
+		}
 	}
 	else if (key == 'S' || key == 's') {
 		printf("Smart Gun mode has been selected\n");
@@ -768,6 +775,24 @@ void specialkeyboard(int key, int x, int y) {
 	}
 }
 
+void mouse(int button, int state, int x, int y) {
+	if (smartgun == 1) {
+		if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+			//printf("x: %d, y: %d\n", x, y);
+			if (x > 85 && x < 166 && y > 263 && y < 333 && score[0] > 0) {
+				score[0]--; // yellow
+			}
+			if (x > 330 && x < 441 && y > 248 && y < 305 && score[1] > 0) {
+				score[1]--; // green
+			}
+			if (x > 220 && x < 277 && y > 223 && y < 277 && score[2] > 0) {
+				score[2]--; // blue
+			}
+		}
+		glutPostRedisplay();
+	}
+}
+
 void mouseWheel(int button, int dir, int x, int y) {
 	if (smartgun == 0) {
 		if (dir > 0) {
@@ -795,6 +820,9 @@ void main_menu(int option) {
 		smartgun = 0;
 		repulsorbeam = 0;
 		unibeam = 0;
+		score[0] = 5;
+		score[1] = 5;
+		score[2] = 5;
 		printf("Init has been selected\n");
 	}
 	else if (option == 2) {
