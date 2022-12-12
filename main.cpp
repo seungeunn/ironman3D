@@ -12,6 +12,7 @@ using std::sqrt;
 int disassemble = 0;
 int individual = 0;
 int color = 0;
+int background = 0;
 int houseparty = 0;
 int smartgun = 0;
 int repulsorbeam = 0;
@@ -24,7 +25,6 @@ double cam[3];
 double center[3] = { 0, 0, 0 };
 double up[3] = { 0, cos(phi * M_PI / 180), 0 };
 
-GLuint g_nCubeTex;
 GLUquadric* qobj = gluNewQuadric();
 
 ObjParser* face = new ObjParser("obj/face.obj");
@@ -49,10 +49,15 @@ GLuint silvertexture;
 GLuint blacktexture;
 GLuint pinktexture;
 GLuint bluetexture;
+GLuint whitetexture;
+
+GLuint caseCubeTex;
+GLuint universeCubeTex;
+GLuint hallCubeTex;
 
 void draw_ironman();
 void setEnvironmentMap();
-void draw_skyBox();
+void draw_skyBox(GLuint);
 void housepartyProtocol();
 void smartGun();
 void Picking();
@@ -70,6 +75,7 @@ void mouseWheel(int, int, int, int);
 void mouse(int, int, int, int);
 void sub_menu1(int);
 void sub_menu2(int);
+void sub_menu3(int);
 void main_menu(int);
 void printInstruction();
 
@@ -88,20 +94,26 @@ int main(int argc, char** argv) {
 	glutAddMenuEntry("Blue", 11);
 
 	int submenu2 = glutCreateMenu(sub_menu2);
-	glutAddMenuEntry("face", 20);
-	glutAddMenuEntry("helmet", 21);
-	glutAddMenuEntry("body", 22);
-	glutAddMenuEntry("upper arm", 23);
-	glutAddMenuEntry("under arm", 24);
-	glutAddMenuEntry("hand", 25);
-	glutAddMenuEntry("upper leg", 26);
-	glutAddMenuEntry("under leg", 27);
+	glutAddMenuEntry("Case", 20);
+	glutAddMenuEntry("Hall of armor", 21);
+	glutAddMenuEntry("Universe", 22);
+
+	int submenu3 = glutCreateMenu(sub_menu3);
+	glutAddMenuEntry("face", 30);
+	glutAddMenuEntry("helmet", 31);
+	glutAddMenuEntry("body", 32);
+	glutAddMenuEntry("upper arm", 33);
+	glutAddMenuEntry("under arm", 34);
+	glutAddMenuEntry("hand", 35);
+	glutAddMenuEntry("upper leg", 36);
+	glutAddMenuEntry("under leg", 37);
 
 	int mainmenu = glutCreateMenu(main_menu);
 	glutAddMenuEntry("Init", 1);
 	glutAddSubMenu("Color", submenu1);
+	glutAddSubMenu("Background", submenu2);
 	glutAddMenuEntry("Disassemble", 2);
-	glutAddSubMenu("Individual", submenu2);
+	glutAddSubMenu("Individual", submenu3);
 	glutAddMenuEntry("Quit", 99);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
@@ -162,6 +174,7 @@ void light_default() {
 void init() {
 	// clear background color
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glColor3f(1.0f, 1.0f, 1.0f);
 
 	// set blend
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -200,7 +213,7 @@ void setTextureMapping() {
 	glGenTextures(1, &goldtexture);
 	glBindTexture(GL_TEXTURE_2D, goldtexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); //GL_REPLACE, GL_MODULATE
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -209,6 +222,16 @@ void setTextureMapping() {
 	img = readImageData("img/silver.bmp", &imgWidth, &imgHeight, &channels);
 	glGenTextures(1, &silvertexture);
 	glBindTexture(GL_TEXTURE_2D, silvertexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	img = readImageData("img/white.bmp", &imgWidth, &imgHeight, &channels);
+	glGenTextures(1, &whitetexture);
+	glBindTexture(GL_TEXTURE_2D, whitetexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -259,31 +282,15 @@ void setTextureMapping() {
 
 void setEnvironmentMap() {
 	int imgWidth, imgHeight, channels;
-	
-	uchar* img0 = readImageData("img/1024px.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img1 = readImageData("img/1024nx.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img2 = readImageData("img/1024py.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img3 = readImageData("img/1024ny.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img4 = readImageData("img/1024pz.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img5 = readImageData("img/1024nz.bmp", &imgWidth, &imgHeight, &channels);
-	/*
 	uchar* img0 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img1 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img2 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img3 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img4 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img5 = readImageData("img/hallofarmor2.bmp", &imgWidth, &imgHeight, &channels);
-	
-	uchar* img0 = readImageData("img/128px.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img1 = readImageData("img/128nx.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img2 = readImageData("img/128py.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img3 = readImageData("img/128ny.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img4 = readImageData("img/128pz.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img5 = readImageData("img/128nz.bmp", &imgWidth, &imgHeight, &channels);
-	*/
+	uchar* img5 = readImageData("img/casee1.bmp", &imgWidth, &imgHeight, &channels);
 
-	glGenTextures(1, &g_nCubeTex);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, g_nCubeTex);
+	glGenTextures(1, &caseCubeTex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, caseCubeTex);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img1);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img2);
@@ -291,7 +298,39 @@ void setEnvironmentMap() {
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img4);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img5);
 
-	glBindTexture(GL_TEXTURE_CUBE_MAP, g_nCubeTex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, caseCubeTex);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
+	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
+	glTexGeni(GL_R, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
+
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
+	glEnable(GL_TEXTURE_GEN_R);
+	glEnable(GL_TEXTURE_CUBE_MAP);
+
+	img0 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	img1 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	img2 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	img3 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	img4 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	img5 = readImageData("img/hallofarmor2.bmp", &imgWidth, &imgHeight, &channels);
+
+	glGenTextures(1, &hallCubeTex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, hallCubeTex);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img1);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img2);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img3);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img4);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img5);
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, hallCubeTex);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -309,6 +348,7 @@ void setEnvironmentMap() {
 }
 
 void draw_obj(ObjParser* objParser, GLuint texture) {
+	glDisable(GL_BLEND);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glBegin(GL_TRIANGLES);
 	for (unsigned int n = 0; n < objParser->getFaceSize(); n += 3) {
@@ -334,6 +374,7 @@ void draw_obj(ObjParser* objParser, GLuint texture) {
 			objParser->vertices[objParser->vertexIdx[n + 2] - 1].z);
 	}
 	glEnd();
+	glEnable(GL_BLEND);
 }
 
 void draw_ironman() {
@@ -430,7 +471,7 @@ void draw_ironman() {
 			glPushMatrix();
 			glTranslatef(0, 0, 0.5);
 		}
-		draw_obj(arc, silvertexture);
+		draw_obj(arc, whitetexture);
 		if (disassemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
@@ -451,44 +492,44 @@ void draw_ironman() {
 			glPopMatrix();
 		}
 	}
-	else if (individual == 20) {
+	else if (individual == 30) {
 		draw_obj(face, goldtexture);
 	}
-	else if (individual == 21) {
+	else if (individual == 31) {
 		if (color == 0) draw_obj(helmet, redtexture);
 		else if (color == 10) draw_obj(helmet, pinktexture);
 		else if (color == 11) draw_obj(helmet, bluetexture);
 	}
-	else if (individual == 22) {
+	else if (individual == 32) {
 		if (color == 0) draw_obj(body, redtexture);
 		else if (color == 10) draw_obj(body, pinktexture);
 		else if (color == 11) draw_obj(body, bluetexture);
 		draw_obj(arc, silvertexture);
 		draw_obj(gun, blacktexture);
 	}
-	else if (individual == 23) {
+	else if (individual == 33) {
 		draw_obj(arm1gold, goldtexture);
 
 		if (color == 0) draw_obj(arm1red, redtexture);
 		else if (color == 10) draw_obj(arm1red, pinktexture);
 		else if (color == 11) draw_obj(arm1red, bluetexture);
 	}
-	else if (individual == 24) {
+	else if (individual == 34) {
 		draw_obj(arm2, goldtexture);
 	}
-	else if (individual == 25) {
+	else if (individual == 35) {
 		if (color == 0) draw_obj(hand, redtexture);
 		else if (color == 10) draw_obj(hand, pinktexture);
 		else if (color == 11) draw_obj(hand, bluetexture);
 		draw_obj(handarc, silvertexture);
 	}
-	else if (individual == 26) {
+	else if (individual == 36) {
 		draw_obj(leg1gold, goldtexture);
 		if (color == 0) draw_obj(leg1red, redtexture);
 		else if (color == 10) draw_obj(leg1red, pinktexture);
 		else if (color == 11) draw_obj(leg1red, bluetexture);
 	}
-	else if (individual == 27) {
+	else if (individual == 37) {
 		if (color == 0) draw_obj(leg2, redtexture);
 		else if (color == 10) draw_obj(leg2, pinktexture);
 		else if (color == 11) draw_obj(leg2, bluetexture);
@@ -497,11 +538,11 @@ void draw_ironman() {
 	}
 }
 
-void draw_skyBox() {
+void draw_skyBox(GLuint texture) {
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glDisable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_CUBE_MAP);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, g_nCubeTex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 	float g_nSkysize = 200;
 	glBegin(GL_QUADS);
 	//px
@@ -630,47 +671,50 @@ void smartGun() {
 	glDisable(GL_TEXTURE_2D);
 	if (score[0] != 0) {
 		glPushMatrix();
-			glColor3f(1, 0, 0);
-			glPushMatrix();
-			glTranslatef(6.2, 2.5, 11);
-			for (int i = 0; i < score[0]; i++) {
-				glutSolidSphere(0.2, 30, 30);
-				glTranslatef(-0.6, 0, 0);
-			}
-			glPopMatrix();
 		glTranslatef(5, 0, 11);
 		glColor3f(1, 1, 0); // yellow
 		glutSolidDodecahedron();
 		glPopMatrix();
+
+		glColor3f(1, 0, 0);
+		glPushMatrix();
+		glTranslatef(6.2, 2.5, 11);
+		for (int i = 0; i < score[0]; i++) {
+			glutSolidSphere(0.2, 30, 30);
+			glTranslatef(-0.6, 0, 0);
+		}
+		glPopMatrix();
 	}
 	if (score[1] != 0) {
 		glPushMatrix();
-			glColor3f(1, 0, 0);
-			glPushMatrix();
-			glTranslatef(-5, 2.6, 13);
-			for (int i = 0; i < score[1]; i++) {
-				glutSolidSphere(0.2, 30, 30);
-				glTranslatef(-0.6, 0, 0);
-			}
-			glPopMatrix();
 		glTranslatef(-7, 0, 15);
 		glColor3f(0, 1, 0); // green
 		glutSolidTeapot(2);
 		glPopMatrix();
+
+		glColor3f(1, 0, 0);
+		glPushMatrix();
+		glTranslatef(-5, 2.6, 13);
+		for (int i = 0; i < score[1]; i++) {
+			glutSolidSphere(0.2, 30, 30);
+			glTranslatef(-0.6, 0, 0);
+		}
+		glPopMatrix();
 	}
 	if (score[2] != 0) {
 		glPushMatrix();
-			glColor3f(1, 0, 0);
-			glPushMatrix();
-			glTranslatef(1.2, 3.6, 13);
-			for (int i = 0; i < score[2]; i++) {
-				glutSolidSphere(0.2, 30, 30);
-				glTranslatef(-0.6, 0, 0);
-			}
-			glPopMatrix();
 		glTranslatef(0, 0, 21);
 		glColor3f(0, 0, 1); // blue
 		glutSolidSphere(2, 30, 30);
+		glPopMatrix();
+
+		glColor3f(1, 0, 0);
+		glPushMatrix();
+		glTranslatef(1.2, 3.6, 13);
+		for (int i = 0; i < score[2]; i++) {
+			glutSolidSphere(0.2, 30, 30);
+			glTranslatef(-0.6, 0, 0);
+		}
 		glPopMatrix();
 	}
 	glColor3f(1, 1, 1);
@@ -686,7 +730,12 @@ void draw() {
 	cam[2] = radius * sin(theta * M_PI / 180) * cos(phi * M_PI / 180);
 	gluLookAt(cam[0], cam[1], cam[2], center[0], center[1], center[2], up[0], up[1], up[2]);
 
-	draw_skyBox();
+	if (background == 0) {
+		draw_skyBox(caseCubeTex);
+	}
+	else if (background == 1) {
+		draw_skyBox(hallCubeTex);
+	} 
 
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
@@ -711,18 +760,21 @@ void draw() {
 
 void keyboard(unsigned char key, int x, int y) {
 	if (key == 'R' || key == 'r') {
-		if (smartgun == 0) {
-
-		}
 		printf("Repulsor Beam mode has been selected\n");
-
+		if (repulsorbeam == 0) {
+			repulsorbeam = 1;
+		}
+		else {
+			repulsorbeam = 0;
+		}
 	}
 	else if (key == 'U' || key == 'u') {
-		if (smartgun == 0) {
-			printf("UniBeam Blast mode has been selected\n");
-			if (unibeam == 0)
-				unibeam = 1;
-			else unibeam = 0;
+		printf("UniBeam Blast mode has been selected\n");
+		if (unibeam == 0) {
+			unibeam = 1;
+		}
+		else {
+			unibeam = 0;
 		}
 	}
 	else if (key == 'S' || key == 's') {
@@ -744,13 +796,14 @@ void keyboard(unsigned char key, int x, int y) {
 		}
 	}
 	else if (key == 'H' || key == 'h') {
-		if (smartgun == 0) {
-			printf("House Party Protocol has been selected\n");
-			if (houseparty == 0)
-				houseparty = 1;
-			else houseparty = 0;
+		printf("House Party Protocol has been selected\n");
+		if (houseparty == 0) {
+			houseparty = 1;
 		}
-	} 
+		else {
+			houseparty = 0;
+		}
+	}
 
 	glutPostRedisplay();
 }
@@ -788,6 +841,11 @@ void mouse(int button, int state, int x, int y) {
 			if (x > 220 && x < 277 && y > 223 && y < 277 && score[2] > 0) {
 				score[2]--; // blue
 			}
+			//glColor3f(1, 0, 0);
+			//glBegin(GL_POINTS);
+			//glVertex2f(x, y);
+			//glEnd();
+			//glColor3f(1, 1, 1);
 		}
 		glutPostRedisplay();
 	}
@@ -815,7 +873,8 @@ void main_menu(int option) {
 		center[1] = 0;
 		disassemble = 0;
 		individual = 0;
-		color = 0;
+		color = 0; 
+		background = 0;
 		houseparty = 0;
 		smartgun = 0;
 		repulsorbeam = 0;
@@ -853,38 +912,54 @@ void sub_menu1(int option) {
 	}
 	glutPostRedisplay();
 }
-	
+
 void sub_menu2(int option) {
 	if (option == 20) {
-		individual = 20;
-		printf("Face has been selected\n");
+		background = 0;
+		printf("Case has been selected\n");
 	}
-	else if (option == 21) {
-		individual = 21;
-		printf("Helmet has been selected\n");
+	if (option == 21) {
+		background = 1;
+		printf("Hall of armor has been selected\n");
 	}
 	else if (option == 22) {
-		individual = 22;
+		background = 2;
+		printf("Universe has been selected\n");
+	}
+	glutPostRedisplay();
+}
+
+void sub_menu3(int option) {
+	if (option == 30) {
+		individual = 30;
+		printf("Face has been selected\n");
+	}
+	else if (option == 31) {
+		individual = 31;
+		printf("Helmet has been selected\n");
+	}
+	else if (option == 32) {
+		individual = 32;
 		printf("Body has been selected\n");
 	}
-	else if (option == 23) {
-		individual = 23;
+	else if (option == 33) {
+		individual = 33;
 		printf("Upper Arm has been selected\n");
 	}
-	else if (option == 24) {
-		individual = 24;
+	else if (option == 34) {
+		individual = 34;
 		printf("Under Arm has been selected\n");
 	}
-	else if (option == 25) {
-		individual = 25;
+	else if (option == 35) {
+		individual = 35;
 		printf("Hand has been selected\n");
 	}
-	else if (option == 26) {
-		individual = 26;
+	else if (option == 36) {
+		individual = 36;
 		printf("Upper Leg has been selected\n");
 	}
-	else if (option == 27) {
-		individual = 27;
+	else if (option == 37) {
+		individual = 37;
 		printf("Under Leg has been selected\n");
 	}
 	glutPostRedisplay();
@@ -907,6 +982,7 @@ void printInstruction() {
 	printf("\n-----------Menu Navigation-----------\n");
 	printf("Init\n");
 	printf("Color(red, pink, blue)\n");
+	printf("Background(case, hall of armor, universe\n");
 	printf("Disassenble\n");
 	printf("Individual\n");
 	printf("Exit\n\n");
