@@ -1,13 +1,24 @@
 #include "ObjParser.h"
 #include "bmpfuncs.h"
+#include <Windows.h>
 #include <GL/glext.h>
+#include <mmsystem.h>
+#pragma comment(lib,"winmm.lib")
 
 #define WINDOW_WIDTH 500
 #define WINDOW_HEIGHT 500
 #define M_PI 3.1415926535897
+
 using std::cos;
 using std::sin;
 using std::sqrt;
+double radius = 11;
+double theta = 80, phi = 1;
+double cam[3];
+double center[3] = { 0, 0, 0 };
+double up[3] = { 0, cos(phi * M_PI / 180), 0 };
+
+POINT ptMouse;
 
 int assemble = 0;
 double a = 0;
@@ -15,28 +26,34 @@ int individual = 0;
 int color = 0;
 int background = 0;
 int houseparty = 0;
-double h[2] = { 0,0 };
+double h[5] = { 0,0,0,0,0 };
 int smartgun = 0;
 int repulsorbeam = 0;
-int unibeam = 0;
+double r = 0;
 int score[3] = { 5,5,5 };
-
-double radius = 11;
-double theta = 80, phi = 1;
-double cam[3];
-double center[3] = { 0, 0, 0 };
-double up[3] = { 0, cos(phi * M_PI / 180), 0 };
 
 ObjParser* face = new ObjParser("obj/face.obj");
 ObjParser* helmet = new ObjParser("obj/helmet.obj");
 ObjParser* body = new ObjParser("obj/body.obj");
 ObjParser* arc = new ObjParser("obj/arc.obj");
 ObjParser* arm1gold = new ObjParser("obj/arm1gold.obj");
+ObjParser* arm1goldleft = new ObjParser("obj/arm1goldleft.obj");
+ObjParser* arm1goldright = new ObjParser("obj/arm1goldright.obj");
 ObjParser* arm1red = new ObjParser("obj/arm1red.obj");
+ObjParser* arm1redleft = new ObjParser("obj/arm1redleft.obj");
+ObjParser* arm1redright = new ObjParser("obj/arm1redright.obj");
 ObjParser* arm2 = new ObjParser("obj/arm2.obj");
+ObjParser* arm2left = new ObjParser("obj/arm2left.obj");
+ObjParser* arm2right = new ObjParser("obj/arm2right.obj");
 ObjParser* gun = new ObjParser("obj/gun.obj");
 ObjParser* hand = new ObjParser("obj/hand.obj");
+ObjParser* handleft = new ObjParser("obj/handleft.obj");
+ObjParser* handright = new ObjParser("obj/handright.obj");
+ObjParser* handright2 = new ObjParser("obj/handright2.obj");
 ObjParser* handarc = new ObjParser("obj/handarc.obj");
+ObjParser* handarcleft = new ObjParser("obj/handarcleft.obj");
+ObjParser* handarcright = new ObjParser("obj/handarcright.obj");
+ObjParser* handarcright2 = new ObjParser("obj/handarcright2.obj");
 ObjParser* leg1gold = new ObjParser("obj/leg1gold.obj");
 ObjParser* leg1red = new ObjParser("obj/leg1red.obj");
 ObjParser* leg2 = new ObjParser("obj/leg2.obj");
@@ -156,12 +173,6 @@ void light_default() {
 	glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
-	/************* spot position setting ************/
-	GLfloat spot_direction[] = { -10.0, 0.0, 0.0, 1.0 };
-	glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 45.0);
-	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spot_direction);
-	glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 20.0);
-
 	/************ Material  setting ************/
 	GLfloat specularMaterial[] = { 0.8f, 0.8f, 0.8f, 1.5f };
 	GLfloat diffuseMaterial[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -176,7 +187,6 @@ void light_default() {
 	
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
-	//glEnable(GL_LIGHT1);
 
 	// depth test enable
 	glEnable(GL_DEPTH_TEST);
@@ -224,19 +234,37 @@ void resize(int width, int height) {
 
 void idle() {
 	if (assemble == 1) {
-		a = a + 0.01;
+		a = a + 0.015;
 		if (a >= 6) {
 			a = 6;
 		}
 	}
 	if (houseparty == 1) {
-		h[0] = h[0] + 0.5;
-		if (h[0] >= 10) {
-			h[0] = 10;
+		h[0] = h[0] + 0.6;
+		if (h[0] >= 20) {
+			h[0] = 20;
 		}
-		h[1] = h[1] + 0.5;
-		if (h[1] >= 15) {
-			h[1] = 15;
+		h[1] = h[1] + 0.45;
+		if (h[1] >= 20) {
+			h[1] = 20;
+		}	
+		h[2] = h[2] + 0.3;
+		if (h[2] >= 20) {
+			h[2] = 20;
+		}
+		h[3] = h[3] + 0.5;
+		if (h[3] >= 25) {
+			h[3] = 25;
+		}
+		h[4] = h[4] + 0.45;
+		if (h[4] >= 25) {
+			h[4] = 25;
+		}
+	}
+	if (repulsorbeam == 1) {
+		r = r + 1;
+		if (r >= 90) {
+			r = 90;
 		}
 	}
 	glutPostRedisplay();
@@ -574,28 +602,57 @@ void draw_ironman() {
 			glTranslatef(0, 0, 6 - a);
 		}
 		draw_obj(face, goldtexture);
-
 		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(-6 + a, 0, 0);
 		}
-		draw_obj(arm1gold, goldtexture);
-
+		draw_obj(arm1goldleft, goldtexture);
+		if (assemble == 1) {
+			glPopMatrix();
+			glPushMatrix();
+			glTranslatef(6 - a, 0, 0);
+		} 
+		if (repulsorbeam == 1) {
+			glPushMatrix();
+			glRotatef(-r, 1, 0, 0);
+			glTranslatef(0, -0.6, 1.4);
+		}
+		draw_obj(arm1goldright, goldtexture);
+		if (repulsorbeam == 1) {
+			glPopMatrix();
+		}
+		if (assemble == 1) {
+			glPopMatrix();
+			glPushMatrix();
+			glTranslatef(-6 + a, -6 + a, 0);
+		}
+		draw_obj(arm2left, goldtexture);
 		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(6 - a, -6 + a, 0);
 		}
-		draw_obj(arm2, goldtexture);
-
+		if (assemble == 1) {
+			glPopMatrix();
+			glPushMatrix();
+			glTranslatef(0, 0, 6 - a);
+		}
+		if (repulsorbeam == 1) {
+			glPushMatrix();
+			glRotatef(-r, 1, 0, 0);
+			glTranslatef(-0.1, -0.6, 1.4);
+		}
+		draw_obj(arm2right, goldtexture);
+		if (repulsorbeam == 1) {
+			glPopMatrix();
+		}
 		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, -6 + a, 0);
 		}
 		draw_obj(leg1gold, goldtexture);
-
 		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
@@ -618,19 +675,54 @@ void draw_ironman() {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(0, 0, 6 - a);
+		} 
+		if (color == 0) draw_obj(arm1redleft, redtexture);
+		else if (color == 10) draw_obj(arm1redleft, pinktexture);
+		else if (color == 11) draw_obj(arm1redleft, bluetexture);
+		if (assemble == 1) {
+			glPopMatrix();
+			glPushMatrix();
+			glTranslatef(0, 0, 6 - a);
 		}
-		if (color == 0) draw_obj(arm1red, redtexture);
-		else if (color == 10) draw_obj(arm1red, pinktexture);
-		else if (color == 11) draw_obj(arm1red, bluetexture);
-
+		if (repulsorbeam == 1) {
+			glPushMatrix();
+			glRotatef(-r, 1, 0, 0);
+			glTranslatef(0, -0.6, 1.4);
+		}
+		if (color == 0) draw_obj(arm1redright, redtexture);
+		else if (color == 10) draw_obj(arm1redright, pinktexture);
+		else if (color == 11) draw_obj(arm1redright, bluetexture);
+		if (repulsorbeam == 1) {
+			glPopMatrix();
+		}
 		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
 			glTranslatef(-6 + a, 0, -6 + a);
 		}
-		if (color == 0) draw_obj(hand, redtexture);
-		else if (color == 10) draw_obj(hand, pinktexture);
-		else if (color == 11) draw_obj(hand, bluetexture);
+		if (color == 0) draw_obj(handleft, redtexture);
+		else if (color == 10) draw_obj(handleft, pinktexture);
+		else if (color == 11) draw_obj(handleft, bluetexture);
+		if (assemble == 1) {
+			glPopMatrix();
+			glPushMatrix();
+			glTranslatef(6 - a, 0, -6 + a);
+		}
+		if (repulsorbeam == 1) {
+			glPushMatrix();
+			glRotatef(80-r, 1, 0, 0);
+			glTranslatef(0, 0, -0.6);
+			if (color == 0) draw_obj(handright2, redtexture);
+			else if (color == 10) draw_obj(handright2, pinktexture);
+			else if (color == 11) draw_obj(handright2, bluetexture);
+			glPopMatrix();
+			glPushMatrix();
+		}
+		else {
+			if (color == 0) draw_obj(handright, redtexture);
+			else if (color == 10) draw_obj(handright, pinktexture);
+			else if (color == 11) draw_obj(handright, bluetexture);
+		}
 
 		if (assemble == 1) {
 			glPopMatrix();
@@ -662,8 +754,18 @@ void draw_ironman() {
 			glPushMatrix();
 			glTranslatef(6 - a, 0, -6 + a);
 		}
-		draw_obj(handarc, silvertexture);
-
+		draw_obj(handarcleft, silvertexture);
+		if (repulsorbeam == 1) {
+			glPushMatrix();
+			glRotatef(80 - r, 1, 0, 0);
+			glTranslatef(0, 0, -0.6);
+			draw_obj(handarcright2, whitetexture);
+			glPopMatrix();
+		} 
+		else {
+			draw_obj(handarcright, silvertexture);
+		}
+	
 		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
@@ -791,100 +893,102 @@ void draw_axis() {
 
 void housepartyProtocol() {
 	// bottom
+	glPushMatrix();
 	draw_ironman();
+	glPopMatrix();
 	
 	// bottom left
 	glPushMatrix();
 	glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(-5, 0, -10 + h[0]);
+	glTranslatef(-5, 0, -20 + h[0]);
 	draw_ironman();
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(-10, 0, -10 + h[0]);
+	glTranslatef(-10, 0, -20 + h[1]);
 	draw_ironman();
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(-15, 0, -10 + h[0]);
+	glTranslatef(-15, 0, -20 + h[2]);
 	draw_ironman();
 	glPopMatrix();
 
 	// bottom right
 	glPushMatrix();
 	glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(5, 0, -10 + h[0]);
+	glTranslatef(5, 0, -20 + h[0]);
 	draw_ironman();
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(10, 0, -10 + h[0]);
+	glTranslatef(10, 0, -20 + h[1]);
 	draw_ironman();
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(15, 0, -10 + h[0]);
+	glTranslatef(15, 0, -20 + h[2]);
 	draw_ironman();
 	glPopMatrix();
 
 	// top
 	glTranslatef(1.0f, 5.0f, -5);
 	glPushMatrix();
-	glTranslatef(0, 0, -15 + h[1]);
+	glTranslatef(0, 25 - h[3], 0);
 	draw_ironman();
 	glPopMatrix();
 
 	// top left
 	glPushMatrix();
 	glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(-5, 15 - h[1], -15 + h[1]);
+	glTranslatef(-5, 25 - h[3], -25 + h[3]);
 	draw_ironman();
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(-25 + h[1], 15 - h[1], -15 + h[1]);
+	glTranslatef(-35 + h[4], 25 - h[4], -25 + h[4]);
 	draw_ironman();	
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(-30 + h[1], 15 - h[1], -15 + h[1]);
+	glTranslatef(-40 + h[4], 25 - h[4], -25 + h[4]);
 	draw_ironman();
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(-35 + h[1], 0.0f, -15 + h[1]);
+	glTranslatef(-45 + h[4], 0.0f, -25 + h[4]);
 	draw_ironman();
 	glPopMatrix();
 
 	// top right
 	glPushMatrix();
 	glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(5, 15 - h[1], -15 + h[1]);
+	glTranslatef(5, 25 - h[3], -25 + h[3]);
 	draw_ironman();
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(25 - h[1], 15 - h[1], -15 + h[1]);
+	glTranslatef(35 - h[4], 25 - h[4], -25 + h[4]);
 	draw_ironman();
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(30 - h[1], 15 - h[1], -15 + h[1]);
+	glTranslatef(40 - h[4], 25 - h[4], -25 + h[4]);
 	draw_ironman();
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
-	glTranslatef(35 - h[1], 0, -15 + h[1]);
+	glTranslatef(45 - h[4], 0, -25 + h[4]);
 	draw_ironman();
 	glPopMatrix();
 }
@@ -957,6 +1061,10 @@ void draw() {
 	cam[2] = radius * sin(theta * M_PI / 180) * cos(phi * M_PI / 180);
 	gluLookAt(cam[0], cam[1], cam[2], center[0], center[1], center[2], up[0], up[1], up[2]);
 
+	if (smartgun == 1) {
+		smartGun();
+	}
+
 	if (background == 0) {
 		draw_skyBox(universeCubeTex);
 	}
@@ -984,6 +1092,9 @@ void draw() {
 		smartGun();
 	}
 
+	//GetCursorPos(&ptMouse);
+	//printf("[윈도우 기준] X: %04d, Y: %04d", ptMouse.x, ptMouse.y);
+	
 	glFlush();
 	glutSwapBuffers();
 }
@@ -992,15 +1103,19 @@ void keyboard(unsigned char key, int x, int y) {
 	if (key == 'R' || key == 'r') {
 		printf("Repulsor Beam mode has been selected\n");
 		if (repulsorbeam == 0) {
+			smartgun = 0;
 			repulsorbeam = 1;
+			PlaySound("sound/repulsor.wav", 0, SND_FILENAME | SND_ASYNC);
 		}
 		else {
 			repulsorbeam = 0;
+			r = 0;
 		}
 	}
 	else if (key == 'S' || key == 's') {
 		printf("Smart Gun mode has been selected\n");
 		if (smartgun == 0) {
+			repulsorbeam = 0; houseparty = 0;
 			smartgun = 1;
 			radius = 8;
 			theta = 50;
@@ -1023,7 +1138,7 @@ void keyboard(unsigned char key, int x, int y) {
 		}
 		else {
 			houseparty = 0;
-			h[0] = 0; h[1] = 0;
+			h[0] = 0; h[1] = 0; h[2] = 0; h[3] = 0; h[4] = 0;
 		}
 	}
 
@@ -1063,11 +1178,16 @@ void mouse(int button, int state, int x, int y) {
 			if (x > 368 && x < 410 && y > 255 && y < 315 && score[2] > 0) {
 				score[2]--; // cylinder
 			}
-			//glColor3f(1, 0, 0);
-			//glBegin(GL_POINTS);
-			//glVertex2f(x, y);
-			//glEnd();
-			//glColor3f(1, 1, 1);
+			PlaySound("sound/gun.wav", 0, SND_FILENAME | SND_ASYNC);
+			
+			/*
+			glPushMatrix();
+			glColor3f(1, 0, 0);
+			glTranslatef(x, y, 0);
+			glutSolidSphere(15, 30, 30);
+			glColor3f(1, 1, 1);
+			glPopMatrix();
+			*/
 		}
 		glutPostRedisplay();
 	}
@@ -1089,26 +1209,23 @@ void main_menu(int option) {
 	if (option == 99) exit(0);
 	else if (option == 1) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		radius = 11;
-		theta = 80;
-		phi = 1;
-		center[1] = 0;
+		radius = 11; theta = 80; phi = 1; center[1] = 0;
 		assemble = 0;
 		a = 0;
 		individual = 0;
 		color = 0; 
 		background = 0;
 		houseparty = 0;
-		h[0] = 0; h[1] = 0;
+		h[0] = 0; h[1] = 0; h[2] = 0; h[3] = 0; h[4] = 0;
 		smartgun = 0;
-		repulsorbeam = 0;
-		unibeam = 0;
+		repulsorbeam = 0; r = 0;
 		score[0] = 5; score[1] = 5; score[2] = 5;
 		printf("Init has been selected\n");
 	}
 	else if (option == 2) {
 		if (assemble == 0) {
 			assemble = 1;
+			PlaySound("sound/move.wav", 0, SND_FILENAME | SND_ASYNC);
 		}
 		else {
 			assemble = 0;
