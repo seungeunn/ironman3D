@@ -9,11 +9,13 @@ using std::cos;
 using std::sin;
 using std::sqrt;
 
-int disassemble = 0;
+int assemble = 0;
+double a = 0;
 int individual = 0;
 int color = 0;
 int background = 0;
 int houseparty = 0;
+double h[2] = { 0,0 };
 int smartgun = 0;
 int repulsorbeam = 0;
 int unibeam = 0;
@@ -24,8 +26,6 @@ double theta = 80, phi = 1;
 double cam[3];
 double center[3] = { 0, 0, 0 };
 double up[3] = { 0, cos(phi * M_PI / 180), 0 };
-
-GLUquadric* qobj = gluNewQuadric();
 
 ObjParser* face = new ObjParser("obj/face.obj");
 ObjParser* helmet = new ObjParser("obj/helmet.obj");
@@ -43,29 +43,40 @@ ObjParser* leg2 = new ObjParser("obj/leg2.obj");
 ObjParser* sil = new ObjParser("obj/silver.obj");
 ObjParser* footarc = new ObjParser("obj/footarc.obj");
 
+/* obj texture mapping */
 GLuint redtexture;
 GLuint goldtexture;
 GLuint silvertexture;
-GLuint blacktexture;
 GLuint pinktexture;
 GLuint bluetexture;
 GLuint whitetexture;
-
-GLuint caseCubeTex;
-GLuint universeCubeTex;
+/* background texture mapping */
 GLuint hallCubeTex;
+GLuint universeCubeTex;
+GLuint oceanCubeTex;
+/* smart gun texture mapping */
+GLuint cubeTex[6];
+GLuint cylinderTex[3];
+GLuint* sphereTex = new GLuint();
+/* quadric object °´Ã¼ »ý¼º */
+GLUquadricObj* qobj = gluNewQuadric();
 
 void draw_ironman();
 void setEnvironmentMap();
 void draw_skyBox(GLuint);
 void housepartyProtocol();
 void smartGun();
-void Picking();
-
+void cubeTextureMapping();
+void cylinderTextureMapping();
+void sphereTextureMapping();
+void draw_textureCube();
+void draw_Cylinder();
+void draw_Sphere();
 void setTextureMapping();
 void draw_obj(ObjParser*, GLuint);
 void init();
 void light_default();
+void idle();
 void resize(int, int);
 void draw();
 void draw_axis();
@@ -94,9 +105,9 @@ int main(int argc, char** argv) {
 	glutAddMenuEntry("Blue", 11);
 
 	int submenu2 = glutCreateMenu(sub_menu2);
-	glutAddMenuEntry("Case", 20);
+	glutAddMenuEntry("Universe", 20);
 	glutAddMenuEntry("Hall of armor", 21);
-	glutAddMenuEntry("Universe", 22);
+	glutAddMenuEntry("Ocean", 22);
 
 	int submenu3 = glutCreateMenu(sub_menu3);
 	glutAddMenuEntry("face", 30);
@@ -112,7 +123,7 @@ int main(int argc, char** argv) {
 	glutAddMenuEntry("Init", 1);
 	glutAddSubMenu("Color", submenu1);
 	glutAddSubMenu("Background", submenu2);
-	glutAddMenuEntry("Disassemble", 2);
+	glutAddMenuEntry("Assemble", 2);
 	glutAddSubMenu("Individual", submenu3);
 	glutAddMenuEntry("Quit", 99);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
@@ -124,6 +135,7 @@ int main(int argc, char** argv) {
 	glutSpecialFunc(&specialkeyboard);
 	glutDisplayFunc(&draw);
 	glutReshapeFunc(&resize);
+	glutIdleFunc(&idle);
 
 	// looping  
 	glutMainLoop();
@@ -194,6 +206,9 @@ void init() {
 	gluQuadricTexture(qobj, GL_TRUE);
 	setEnvironmentMap();
 	setTextureMapping();
+	cubeTextureMapping();
+	cylinderTextureMapping();
+	sphereTextureMapping();
 
 	// print instuction
 	printInstruction();
@@ -205,6 +220,26 @@ void resize(int width, int height) {
 	glLoadIdentity();
 	gluPerspective(60, (double)width / (double)height, 1, 500);
 	glMatrixMode(GL_MODELVIEW);
+}
+
+void idle() {
+	if (assemble == 1) {
+		a = a + 0.01;
+		if (a >= 6) {
+			a = 6;
+		}
+	}
+	if (houseparty == 1) {
+		h[0] = h[0] + 0.5;
+		if (h[0] >= 10) {
+			h[0] = 10;
+		}
+		h[1] = h[1] + 0.5;
+		if (h[1] >= 15) {
+			h[1] = 15;
+		}
+	}
+	glutPostRedisplay();
 }
 
 void setTextureMapping() {
@@ -232,16 +267,6 @@ void setTextureMapping() {
 	img = readImageData("img/white.bmp", &imgWidth, &imgHeight, &channels);
 	glGenTextures(1, &whitetexture);
 	glBindTexture(GL_TEXTURE_2D, whitetexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	img = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
-	glGenTextures(1, &blacktexture);
-	glBindTexture(GL_TEXTURE_2D, blacktexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -282,44 +307,12 @@ void setTextureMapping() {
 
 void setEnvironmentMap() {
 	int imgWidth, imgHeight, channels;
-	uchar* img0 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
-	uchar* img1 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img0 = readImageData("img/lefthall.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img1 = readImageData("img/righthall.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img2 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img3 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img4 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img5 = readImageData("img/casee1.bmp", &imgWidth, &imgHeight, &channels);
-
-	glGenTextures(1, &caseCubeTex);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, caseCubeTex);
-	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
-	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img1);
-	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img2);
-	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img3);
-	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img4);
-	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img5);
-
-	glBindTexture(GL_TEXTURE_CUBE_MAP, caseCubeTex);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
-	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
-	glTexGeni(GL_R, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
-
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
-	glEnable(GL_TEXTURE_GEN_R);
-	glEnable(GL_TEXTURE_CUBE_MAP);
-
-	img0 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
-	img1 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
-	img2 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
-	img3 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
-	img4 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
-	img5 = readImageData("img/hallofarmor2.bmp", &imgWidth, &imgHeight, &channels);
 
 	glGenTextures(1, &hallCubeTex);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, hallCubeTex);
@@ -337,6 +330,47 @@ void setEnvironmentMap() {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
+	img0 = readImageData("img/1024px.bmp", &imgWidth, &imgHeight, &channels);
+	img1 = readImageData("img/1024nx.bmp", &imgWidth, &imgHeight, &channels);
+	img2 = readImageData("img/1024py.bmp", &imgWidth, &imgHeight, &channels);
+	img3 = readImageData("img/1024ny.bmp", &imgWidth, &imgHeight, &channels);
+	img4 = readImageData("img/1024pz.bmp", &imgWidth, &imgHeight, &channels);
+	img5 = readImageData("img/1024nz.bmp", &imgWidth, &imgHeight, &channels);
+
+	glGenTextures(1, &oceanCubeTex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, oceanCubeTex);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img1);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img2);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img3);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img4);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img5);
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, oceanCubeTex);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	img0 = readImageData("img/universe.bmp", &imgWidth, &imgHeight, &channels);
+
+	glGenTextures(1, &universeCubeTex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, universeCubeTex);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, universeCubeTex);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
 	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
 	glTexGeni(GL_R, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
@@ -345,6 +379,159 @@ void setEnvironmentMap() {
 	glEnable(GL_TEXTURE_GEN_T);
 	glEnable(GL_TEXTURE_GEN_R);
 	glEnable(GL_TEXTURE_CUBE_MAP);
+}
+
+void cubeTextureMapping() {
+	glGenTextures(6, cubeTex);
+	int imgWidth, imgHeight, channels;
+	for (int i = 0; i < 6; i++) {
+		glBindTexture(GL_TEXTURE_2D, cubeTex[i]);
+		char buf[100];
+		sprintf(buf, "img/TexImage%d.bmp", i);
+		buf[strlen(buf)] = 0;
+		unsigned char* img = readImageData(buf, &imgWidth, &imgHeight, &channels);
+		glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	}
+}
+
+void cylinderTextureMapping() {
+	glGenTextures(3, cylinderTex);
+
+	glBindTexture(GL_TEXTURE_2D, cylinderTex[0]);
+	int width, height, channels;
+	unsigned char* img = readImageData("img/CIDER_T.bmp", &width, &height, &channels);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	glBindTexture(GL_TEXTURE_2D, cylinderTex[1]);
+	img = readImageData("img/coke.bmp", &width, &height, &channels);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	glBindTexture(GL_TEXTURE_2D, cylinderTex[2]);
+	img = readImageData("img/CIDER_B.bmp", &width, &height, &channels);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+}
+
+void sphereTextureMapping() {
+	glGenTextures(1, sphereTex);
+	glBindTexture(GL_TEXTURE_2D, *sphereTex);
+	int width, height, channels;
+	unsigned char* img = readImageData("img/EARTH.bmp", &width, &height, &channels);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+}
+
+void draw_textureCube() {
+	glColor3f(1.0, 1.0, 1.0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+	glBindTexture(GL_TEXTURE_2D, cubeTex[0]);
+	glBegin(GL_QUADS);
+	glNormal3f(-1.0, 0, 0);   // -x axis
+	glTexCoord2f(0, 0); glVertex3f(-1.0, 1.0, -1.0);
+	glTexCoord2f(1, 0); glVertex3f(-1.0, -1.0, -1.0);
+	glTexCoord2f(1, 1); glVertex3f(-1.0, -1.0, 1.0);
+	glTexCoord2f(0, 1); glVertex3f(-1.0, 1.0, 1.0);
+	glEnd();
+
+	glBindTexture(GL_TEXTURE_2D, cubeTex[1]);
+	glBegin(GL_QUADS);
+	glNormal3f(1.0, 0, 0);   // x axis
+	glTexCoord2f(0, 0); glVertex3f(1.0, 1.0, 1.0);
+	glTexCoord2f(1, 0); glVertex3f(1.0, -1.0, 1.0);
+	glTexCoord2f(1, 1); glVertex3f(1.0, -1.0, -1.0);
+	glTexCoord2f(0, 1); glVertex3f(1.0, 1.0, -1.0);
+	glEnd();
+
+	glBindTexture(GL_TEXTURE_2D, cubeTex[2]);
+	glBegin(GL_QUADS);
+	glNormal3f(0, -1.0, 0);   // -y axis
+	glTexCoord2f(0, 0); glVertex3f(-1.0, -1.0, -1.0);
+	glTexCoord2f(1, 0); glVertex3f(1.0, -1.0, -1.0);
+	glTexCoord2f(1, 1); glVertex3f(1.0, -1.0, 1.0);
+	glTexCoord2f(0, 1); glVertex3f(-1.0, -1.0, 1.0);
+	glEnd();
+
+	glBindTexture(GL_TEXTURE_2D, cubeTex[3]);
+	glBegin(GL_QUADS);
+	glNormal3f(0, 1.0, 0);   // y axis
+	glTexCoord2f(0, 0); glVertex3f(-1.0, 1.0, 1.0);
+	glTexCoord2f(1, 0); glVertex3f(1.0, 1.0, 1.0);
+	glTexCoord2f(1, 1); glVertex3f(1.0, 1.0, -1.0);
+	glTexCoord2f(0, 1); glVertex3f(-1.0, 1.0, -1.0);
+	glEnd();
+
+	glBindTexture(GL_TEXTURE_2D, cubeTex[4]);
+	glBegin(GL_QUADS);
+	glNormal3f(0, 0, 1.0);   // z axis
+	glTexCoord2f(0, 0); glVertex3f(1.0, 1.0, 1.0);
+	glTexCoord2f(1, 0); glVertex3f(-1.0, 1.0, 1.0);
+	glTexCoord2f(1, 1); glVertex3f(-1.0, -1.0, 1.0);
+	glTexCoord2f(0, 1); glVertex3f(1.0, -1.0, 1.0);
+	glEnd();
+
+	glBindTexture(GL_TEXTURE_2D, cubeTex[5]);
+	glBegin(GL_QUADS);
+	glNormal3f(0, 0, -1.0);   // -z axis
+	glTexCoord2f(0, 0); glVertex3f(1.0, 1.0, -1.0);
+	glTexCoord2f(1, 0); glVertex3f(-1.0, 1.0, -1.0);
+	glTexCoord2f(1, 1); glVertex3f(-1.0, -1.0, -1.0);
+	glTexCoord2f(0, 1); glVertex3f(1.0, -1.0, -1.0);
+	glEnd();
+}
+
+void draw_Cylinder() {
+	glColor3f(1.0, 1.0, 1.0);
+
+	/* À­¸é - Disk */
+	glPushMatrix();
+	glBindTexture(GL_TEXTURE_2D, cylinderTex[0]);
+	glTranslatef(-2, 1, 0);
+	glRotatef(-90, 1, 0, 0);
+	gluDisk(qobj, 0, 1, 12, 1);
+	glPopMatrix();
+
+	/* ¿·¸é - Cylinder */
+	glPushMatrix();
+	glBindTexture(GL_TEXTURE_2D, cylinderTex[1]);
+	glTranslatef(-2, -2, 0);
+	glRotatef(-90, 1, 0, 0);
+	gluCylinder(qobj, 1, 1, 3, 12, 1);
+	glPopMatrix();
+
+	/* ¾Æ·§¸é - Disk */
+	glPushMatrix();
+	glBindTexture(GL_TEXTURE_2D, cylinderTex[2]);
+	glTranslatef(-2, -2, 0);
+	glRotatef(90, 1, 0, 0);
+	gluDisk(qobj, 0, 1, 12, 1);
+	glPopMatrix();
+}
+
+void draw_Sphere() {
+	glColor3f(1.0, 1.0, 1.0);
+	glBindTexture(GL_TEXTURE_2D, *sphereTex);
+	glRotatef(-90, 1, 0, 0);
+	gluSphere(qobj, 2, 24, 24);
+	glRotatef(90, 1, 0, 0);
 }
 
 void draw_obj(ObjParser* objParser, GLuint texture) {
@@ -382,113 +569,116 @@ void draw_ironman() {
 	glEnable(GL_LIGHT0);
 
 	if (individual == 0) {
-		if (disassemble == 1) {
+		if (assemble == 1) {
 			glPushMatrix();
-			glTranslatef(0, 1, 1);
+			glTranslatef(0, 0, 6 - a);
 		}
 		draw_obj(face, goldtexture);
-		if (disassemble == 1) {
+
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, 1);
+			glTranslatef(-6 + a, 0, 0);
 		}
 		draw_obj(arm1gold, goldtexture);
-		if (disassemble == 1) {
+
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, 1.5);
+			glTranslatef(6 - a, -6 + a, 0);
 		}
 		draw_obj(arm2, goldtexture);
-		if (disassemble == 1) {
+
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, -1, 1);
+			glTranslatef(0, -6 + a, 0);
 		}
 		draw_obj(leg1gold, goldtexture);
 
-		if (disassemble == 1) {
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 1, 0);
+			glTranslatef(0, 6 - a, 0);
 		}
-
 		if (color == 0) draw_obj(helmet, redtexture);
 		else if(color == 10) draw_obj(helmet, pinktexture);
 		else if(color == 11) draw_obj(helmet, bluetexture);
 
-		if (disassemble == 1) {
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, -1);
+			glTranslatef(0, 0, -6 + a);
 		}
-
 		if (color == 0) draw_obj(body, redtexture);
 		else if (color == 10) draw_obj(body, pinktexture);
 		else if (color == 11) draw_obj(body, bluetexture);
 
-		if (disassemble == 1) {
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0.5, 0.5);
+			glTranslatef(0, 0, 6 - a);
 		}
-
 		if (color == 0) draw_obj(arm1red, redtexture);
 		else if (color == 10) draw_obj(arm1red, pinktexture);
 		else if (color == 11) draw_obj(arm1red, bluetexture);
 
-		if (disassemble == 1) {
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, 2);
+			glTranslatef(-6 + a, 0, -6 + a);
 		}
-
 		if (color == 0) draw_obj(hand, redtexture);
 		else if (color == 10) draw_obj(hand, pinktexture);
 		else if (color == 11) draw_obj(hand, bluetexture);
 
-		if (disassemble == 1) {
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, 0.5);
+			glTranslatef(6 - a, 0, 6 - a);
 		}
-
 		if (color == 0) draw_obj(leg1red, redtexture);
 		else if (color == 10) draw_obj(leg1red, pinktexture);
 		else if (color == 11) draw_obj(leg1red, bluetexture);
 
-		if (disassemble == 1) {
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, -1, 1.5);
+			glTranslatef(-6 + a, 0, 6 - a);
 		}
-
 		if (color == 0) draw_obj(leg2, redtexture);
 		else if (color == 10) draw_obj(leg2, pinktexture);
 		else if (color == 11) draw_obj(leg2, bluetexture);
 
-		if (disassemble == 1) {
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, 0.5);
+			glTranslatef(6 - a, 6 - a, 6 - a);
 		}
 		draw_obj(arc, whitetexture);
-		if (disassemble == 1) {
+
+		if (assemble == 1) {
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, 2);
+			glTranslatef(6 - a, 0, -6 + a);
 		}
 		draw_obj(handarc, silvertexture);
-		if (disassemble == 1) {
+
+		if (assemble == 1) {
 			glPopMatrix();
+			glPushMatrix();
+			glTranslatef(0, 0, 6 - a);
 		}
 		draw_obj(footarc, silvertexture);
 		draw_obj(sil, silvertexture);
-		if (disassemble == 1) {
+
+		if (assemble == 1) {
+			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, 1);
+			glTranslatef(-6 + a, 6 - a, 0);
 		}
-		draw_obj(gun, blacktexture);
-		if (disassemble == 1) {
+		draw_obj(gun, silvertexture);
+		if (assemble == 1) {
 			glPopMatrix();
 		}
 	}
@@ -505,7 +695,7 @@ void draw_ironman() {
 		else if (color == 10) draw_obj(body, pinktexture);
 		else if (color == 11) draw_obj(body, bluetexture);
 		draw_obj(arc, silvertexture);
-		draw_obj(gun, blacktexture);
+		draw_obj(gun, silvertexture);
 	}
 	else if (individual == 33) {
 		draw_obj(arm1gold, goldtexture);
@@ -600,118 +790,155 @@ void draw_axis() {
 }
 
 void housepartyProtocol() {
+	// bottom
+	draw_ironman();
+	
+	// bottom left
 	glPushMatrix();
-		draw_ironman();
-		glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(-5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(-5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(-5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(-5.0f, 0.0f, 0.0f); 
-		draw_ironman();
+	glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(-5, 0, -10 + h[0]);
+	draw_ironman();
 	glPopMatrix();
+
 	glPushMatrix();
-		glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(5.0f, 0.0f, 0.0f);
-		draw_ironman();
+	glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(-10, 0, -10 + h[0]);
+	draw_ironman();
 	glPopMatrix();
-	glTranslatef(1.0f, 5.0f, -5.0f);
+
 	glPushMatrix();
-		draw_ironman();
-		glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(-5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(-5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(-5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(-5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(-5.0f, 0.0f, 0.0f);
-		draw_ironman();
+	glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(-15, 0, -10 + h[0]);
+	draw_ironman();
 	glPopMatrix();
+
+	// bottom right
 	glPushMatrix();
-		glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(5.0f, 0.0f, 0.0f);
-		draw_ironman();
-		glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
-		glTranslatef(5.0f, 0.0f, 0.0f);
-		draw_ironman();
+	glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(5, 0, -10 + h[0]);
+	draw_ironman();
+	glPopMatrix();
+
+	glPushMatrix();
+	glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(10, 0, -10 + h[0]);
+	draw_ironman();
+	glPopMatrix();
+
+	glPushMatrix();
+	glRotatef(-15.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(15, 0, -10 + h[0]);
+	draw_ironman();
+	glPopMatrix();
+
+	// top
+	glTranslatef(1.0f, 5.0f, -5);
+	glPushMatrix();
+	glTranslatef(0, 0, -15 + h[1]);
+	draw_ironman();
+	glPopMatrix();
+
+	// top left
+	glPushMatrix();
+	glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(-5, 15 - h[1], -15 + h[1]);
+	draw_ironman();
+	glPopMatrix();
+
+	glPushMatrix();
+	glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(-25 + h[1], 15 - h[1], -15 + h[1]);
+	draw_ironman();	
+	glPopMatrix();
+
+	glPushMatrix();
+	glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(-30 + h[1], 15 - h[1], -15 + h[1]);
+	draw_ironman();
+	glPopMatrix();
+
+	glPushMatrix();
+	glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(-35 + h[1], 0.0f, -15 + h[1]);
+	draw_ironman();
+	glPopMatrix();
+
+	// top right
+	glPushMatrix();
+	glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(5, 15 - h[1], -15 + h[1]);
+	draw_ironman();
+	glPopMatrix();
+
+	glPushMatrix();
+	glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(25 - h[1], 15 - h[1], -15 + h[1]);
+	draw_ironman();
+	glPopMatrix();
+
+	glPushMatrix();
+	glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(30 - h[1], 15 - h[1], -15 + h[1]);
+	draw_ironman();
+	glPopMatrix();
+
+	glPushMatrix();
+	glRotatef(-10.0f, 0.0f, 1.0f, 0.0f);
+	glTranslatef(35 - h[1], 0, -15 + h[1]);
+	draw_ironman();
 	glPopMatrix();
 }
 
 void smartGun() {
-	glDisable(GL_TEXTURE_2D);
-	if (score[0] != 0) {
+	glEnable(GL_TEXTURE_2D);
+	if (score[0] != 0) { // cube
 		glPushMatrix();
 		glTranslatef(5, 0, 11);
-		glColor3f(1, 1, 0); // yellow
-		glutSolidDodecahedron();
+		glColor3f(1, 1, 1);
+		draw_textureCube();
 		glPopMatrix();
 
-		glColor3f(1, 0, 0);
+		glDisable(GL_TEXTURE_2D);		
 		glPushMatrix();
-		glTranslatef(6.2, 2.5, 11);
+		glTranslatef(6.2, 2.1, 11);
 		for (int i = 0; i < score[0]; i++) {
+			glColor3f(1, 0, 0);
 			glutSolidSphere(0.2, 30, 30);
 			glTranslatef(-0.6, 0, 0);
 		}
 		glPopMatrix();
 	}
-	if (score[1] != 0) {
-		glPushMatrix();
-		glTranslatef(-7, 0, 15);
-		glColor3f(0, 1, 0); // green
-		glutSolidTeapot(2);
-		glPopMatrix();
-
-		glColor3f(1, 0, 0);
-		glPushMatrix();
-		glTranslatef(-5, 2.6, 13);
-		for (int i = 0; i < score[1]; i++) {
-			glutSolidSphere(0.2, 30, 30);
-			glTranslatef(-0.6, 0, 0);
-		}
-		glPopMatrix();
-	}
-	if (score[2] != 0) {
+	glEnable(GL_TEXTURE_2D);
+	if (score[1] != 0) { // sphere
 		glPushMatrix();
 		glTranslatef(0, 0, 21);
-		glColor3f(0, 0, 1); // blue
-		glutSolidSphere(2, 30, 30);
+		glColor3f(1, 1, 1);
+		draw_Sphere();
 		glPopMatrix();
 
-		glColor3f(1, 0, 0);
+		glDisable(GL_TEXTURE_2D);
 		glPushMatrix();
-		glTranslatef(1.2, 3.6, 13);
+		glTranslatef(1.2, 3.8, 13);
+		for (int i = 0; i < score[1]; i++) {
+			glColor3f(1, 0, 0);
+			glutSolidSphere(0.2, 30, 30);
+			glTranslatef(-0.6, 0, 0);
+		}
+		glPopMatrix();
+	}
+	glEnable(GL_TEXTURE_2D);
+	if (score[2] != 0) { // cylinder
+		glPushMatrix();
+		glTranslatef(-5, 0, 15);
+		glColor3f(1, 1, 1);
+		draw_Cylinder();
+		glPopMatrix();
+
+		glDisable(GL_TEXTURE_2D);
+		glPushMatrix();
+		glTranslatef(-5, 2.6, 13);
 		for (int i = 0; i < score[2]; i++) {
+			glColor3f(1, 0, 0);
 			glutSolidSphere(0.2, 30, 30);
 			glTranslatef(-0.6, 0, 0);
 		}
@@ -731,20 +958,19 @@ void draw() {
 	gluLookAt(cam[0], cam[1], cam[2], center[0], center[1], center[2], up[0], up[1], up[2]);
 
 	if (background == 0) {
-		draw_skyBox(caseCubeTex);
+		draw_skyBox(universeCubeTex);
 	}
 	else if (background == 1) {
 		draw_skyBox(hallCubeTex);
 	} 
+	else if (background == 2) {
+		draw_skyBox(oceanCubeTex);
+	}
 
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
 	glDisable(GL_TEXTURE_GEN_R);
 	glDisable(GL_TEXTURE_CUBE_MAP);
-
-	if (smartgun == 1) {
-		smartGun();
-	}
 
 	if (houseparty == 1 && smartgun == 0) {
 		housepartyProtocol();
@@ -752,6 +978,10 @@ void draw() {
 	else {
 		//draw_axis();
 		draw_ironman();
+	}
+
+	if (smartgun == 1) {
+		smartGun();
 	}
 
 	glFlush();
@@ -766,15 +996,6 @@ void keyboard(unsigned char key, int x, int y) {
 		}
 		else {
 			repulsorbeam = 0;
-		}
-	}
-	else if (key == 'U' || key == 'u') {
-		printf("UniBeam Blast mode has been selected\n");
-		if (unibeam == 0) {
-			unibeam = 1;
-		}
-		else {
-			unibeam = 0;
 		}
 	}
 	else if (key == 'S' || key == 's') {
@@ -802,6 +1023,7 @@ void keyboard(unsigned char key, int x, int y) {
 		}
 		else {
 			houseparty = 0;
+			h[0] = 0; h[1] = 0;
 		}
 	}
 
@@ -831,15 +1053,15 @@ void specialkeyboard(int key, int x, int y) {
 void mouse(int button, int state, int x, int y) {
 	if (smartgun == 1) {
 		if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-			//printf("x: %d, y: %d\n", x, y);
-			if (x > 85 && x < 166 && y > 263 && y < 333 && score[0] > 0) {
-				score[0]--; // yellow
+			printf("x: %d, y: %d\n", x, y);
+			if (x > 98 && x < 156 && y > 270 && y < 328 && score[0] > 0) {
+				score[0]--; // cube
 			}
-			if (x > 330 && x < 441 && y > 248 && y < 305 && score[1] > 0) {
-				score[1]--; // green
+			if (x > 222 && x < 275 && y > 222 && y < 275 && score[1] > 0) {
+				score[1]--; // sphere
 			}
-			if (x > 220 && x < 277 && y > 223 && y < 277 && score[2] > 0) {
-				score[2]--; // blue
+			if (x > 368 && x < 410 && y > 255 && y < 315 && score[2] > 0) {
+				score[2]--; // cylinder
 			}
 			//glColor3f(1, 0, 0);
 			//glBegin(GL_POINTS);
@@ -871,28 +1093,28 @@ void main_menu(int option) {
 		theta = 80;
 		phi = 1;
 		center[1] = 0;
-		disassemble = 0;
+		assemble = 0;
+		a = 0;
 		individual = 0;
 		color = 0; 
 		background = 0;
 		houseparty = 0;
+		h[0] = 0; h[1] = 0;
 		smartgun = 0;
 		repulsorbeam = 0;
 		unibeam = 0;
-		score[0] = 5;
-		score[1] = 5;
-		score[2] = 5;
+		score[0] = 5; score[1] = 5; score[2] = 5;
 		printf("Init has been selected\n");
 	}
 	else if (option == 2) {
-		if (disassemble == 0) {
-			disassemble = 1;
-			printf("disassemble has been selected\n");
+		if (assemble == 0) {
+			assemble = 1;
 		}
 		else {
-			disassemble = 0;
-			printf("disassemble has been selected\n");
+			assemble = 0;
+			a = 0;
 		}
+		printf("Assemble has been selected\n");
 	}
 	glutPostRedisplay();
 }
@@ -916,7 +1138,7 @@ void sub_menu1(int option) {
 void sub_menu2(int option) {
 	if (option == 20) {
 		background = 0;
-		printf("Case has been selected\n");
+		printf("Universe has been selected\n");
 	}
 	if (option == 21) {
 		background = 1;
@@ -924,8 +1146,8 @@ void sub_menu2(int option) {
 	}
 	else if (option == 22) {
 		background = 2;
-		printf("Universe has been selected\n");
-	}
+		printf("Ocean has been selected\n");
+	} 
 	glutPostRedisplay();
 }
 
@@ -969,7 +1191,6 @@ void printInstruction() {
 	/* Á¶ÀÛ¹ý console Ãâ·Â */
 	printf("\n-----------Keyboard Navigation-----------\n");
 	printf("R/r : Repulsor Beam mode\n");
-	printf("U/u : UniBeam Blast mode\n");
 	printf("S/s : Smart Gun mode\n");
 	printf("H/h : House Party Protocol\n");	
 	printf("¹æÇâÅ° : camera À§Ä¡\n");
@@ -982,8 +1203,8 @@ void printInstruction() {
 	printf("\n-----------Menu Navigation-----------\n");
 	printf("Init\n");
 	printf("Color(red, pink, blue)\n");
-	printf("Background(case, hall of armor, universe\n");
-	printf("Disassenble\n");
+	printf("Background(hall of armor, ocean, universe\n");
+	printf("Assemble\n");
 	printf("Individual\n");
 	printf("Exit\n\n");
 }

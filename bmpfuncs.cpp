@@ -112,17 +112,17 @@ uchar* readImageData(const char* filename, int* width, int* height, int* channel
 
 	if (imageSize == 0)
 	{
-		printf("bmpfunc.cpp : There is no channel info, assume input image channel as 3\n");
+		//printf("bmpfunc.cpp : There is no channel info, assume input image channel as 3\n");
 		*channels = 3;
 		imageSize = (*width) * (*height) * 3; // Assume 3 channels
 	}
 	else {
 		if (imageSize == (*width) * (*height)) {
-			printf("bmpfunc.cpp : Input img : 8bit-img\n");
+			//printf("bmpfunc.cpp : Input img : 8bit-img\n");
 			*channels = 1;
 		}
 		else if (imageSize == (*width) * (*height) * 3) {
-			printf("bmpfunc.cpp : input img : 24bit-img\n");
+			//printf("bmpfunc.cpp : input img : 24bit-img\n");
 			*channels = 3;
 		}
 		else { // Assume 3 channels
@@ -189,17 +189,17 @@ float* readImageDataf(const char* filename, int* width, int* height, int* channe
 
 	if (imageSize == 0)
 	{
-		printf("bmpfunc.cpp : There is no channel info, assume input image channel as 3\n");
+		//printf("bmpfunc.cpp : There is no channel info, assume input image channel as 3\n");
 		*channels = 3;
 		imageSize = (*width) * (*height) * 3; // Assume 3 channels
 	}
 	else {
 		if (imageSize == (*width) * (*height)) {
-			printf("bmpfunc.cpp : input img : 8bit-img\n");
+			//printf("bmpfunc.cpp : input img : 8bit-img\n");
 			*channels = 1;
 		}
 		else if (imageSize == (*width) * (*height) * 3) {
-			printf("bmpfunc.cpp : input img : 24bit-img\n");
+			//printf("bmpfunc.cpp : input img : 24bit-img\n");
 			*channels = 3;
 		}
 		else { // Assume 3 channels
