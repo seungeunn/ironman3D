@@ -5,33 +5,32 @@
 #include <mmsystem.h>
 #pragma comment(lib,"winmm.lib")
 
-#define WINDOW_WIDTH 500
-#define WINDOW_HEIGHT 500
+#define WINDOW_WIDTH 1200
+#define WINDOW_HEIGHT 700
 #define M_PI 3.1415926535897
-
 using std::cos;
 using std::sin;
 using std::sqrt;
+
 double radius = 11;
 double theta = 80, phi = 1;
 double cam[3];
 double center[3] = { 0, 0, 0 };
 double up[3] = { 0, cos(phi * M_PI / 180), 0 };
 
-POINT ptMouse;
-
-int assemble = 0;
-double a = 0;
-int individual = 0;
-int color = 0;
-int background = 0;
-int houseparty = 0;
+int assemble = 0; // assemble on/off
+double a = 0; // assemble translate
+int individual = 0; // individual on/off
+int color = 0; // 0:red, 10:pink, 11:blue
+int background = 0; // 0:universe, 1:hall, 2:ocean
+int houseparty = 0; // house party protocol on/off
 double h[5] = { 0,0,0,0,0 };
-int smartgun = 0;
-int repulsorbeam = 0;
-double r = 0;
-int score[3] = { 5,5,5 };
+int smartgun = 0; // smart gun on/off
+int heart[3] = { 5,5,5 }; // 1:cube, 2:sphere, 3:cylinder
+int repulsorbeam = 0; // repulsor beam on/off
+double r = 0; // repulsor beam angle
 
+/* ironman obj */
 ObjParser* face = new ObjParser("obj/face.obj");
 ObjParser* helmet = new ObjParser("obj/helmet.obj");
 ObjParser* body = new ObjParser("obj/body.obj");
@@ -78,19 +77,19 @@ GLuint* sphereTex = new GLuint();
 /* quadric object 객체 생성 */
 GLUquadricObj* qobj = gluNewQuadric();
 
-void draw_ironman();
-void setEnvironmentMap();
-void draw_skyBox(GLuint);
-void housepartyProtocol();
-void smartGun();
+void setEnvironmentMap(); // background texture mapping
+void draw_skyBox(GLuint); // draw skybox
+void housepartyProtocol(); // house party protocol mode
+void smartGun(); // smartgun mode
 void cubeTextureMapping();
 void cylinderTextureMapping();
 void sphereTextureMapping();
 void draw_textureCube();
 void draw_Cylinder();
 void draw_Sphere();
-void setTextureMapping();
-void draw_obj(ObjParser*, GLuint);
+void draw_ironman(); // draw ironman
+void setTextureMapping(); // ironman obj texture mapping
+void draw_obj(ObjParser*, GLuint); // draw ironman obj
 void init();
 void light_default();
 void idle();
@@ -101,32 +100,32 @@ void keyboard(unsigned char, int, int);
 void specialkeyboard(int, int, int);
 void mouseWheel(int, int, int, int);
 void mouse(int, int, int, int);
-void sub_menu1(int);
-void sub_menu2(int);
-void sub_menu3(int);
+void sub_menu1(int); // color
+void sub_menu2(int); // background
+void sub_menu3(int); // individual
 void main_menu(int);
 void printInstruction();
 
 int main(int argc, char** argv) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
-	glutInitWindowSize(500, 500);
-	glutInitWindowPosition(300, 200);
+	glutInitWindowSize(1200, 700);
+	glutInitWindowPosition(0, 0);
 	glutCreateWindow("12201933 이승은 Term Project");
 	init(); // -> 사용자 초기화 함수
 
-	// pop-up 메뉴 등록 함수
-	int submenu1 = glutCreateMenu(sub_menu1);
+	/* pop - up menu function */ 
+	int submenu1 = glutCreateMenu(sub_menu1); // color
 	glutAddMenuEntry("Red", 0);
 	glutAddMenuEntry("Pink", 10);
 	glutAddMenuEntry("Blue", 11);
 
-	int submenu2 = glutCreateMenu(sub_menu2);
+	int submenu2 = glutCreateMenu(sub_menu2); // background
 	glutAddMenuEntry("Universe", 20);
 	glutAddMenuEntry("Hall of armor", 21);
 	glutAddMenuEntry("Ocean", 22);
 
-	int submenu3 = glutCreateMenu(sub_menu3);
+	int submenu3 = glutCreateMenu(sub_menu3); // individual
 	glutAddMenuEntry("face", 30);
 	glutAddMenuEntry("helmet", 31);
 	glutAddMenuEntry("body", 32);
@@ -145,7 +144,7 @@ int main(int argc, char** argv) {
 	glutAddMenuEntry("Quit", 99);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
-	// callback function
+	/* callback function */
 	glutMouseWheelFunc(&mouseWheel);
 	glutMouseFunc(&mouse);
 	glutKeyboardFunc(&keyboard);
@@ -154,7 +153,7 @@ int main(int argc, char** argv) {
 	glutReshapeFunc(&resize);
 	glutIdleFunc(&idle);
 
-	// looping  
+	/* looping */
 	glutMainLoop();
 
 	return 0;
@@ -163,7 +162,7 @@ int main(int argc, char** argv) {
 void light_default() {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-	// lignt0 setting
+	/* light setting */
 	GLfloat ambientLight[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 	GLfloat diffuseLight[] = { 0.9f, 0.9f, 0.9f, 1.0f };
 	GLfloat specularLight[] = { 0.6f, 0.6f, 0.6f, 1.0f };
@@ -173,7 +172,7 @@ void light_default() {
 	glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
-	/************ Material  setting ************/
+	/* material setting */
 	GLfloat specularMaterial[] = { 0.8f, 0.8f, 0.8f, 1.5f };
 	GLfloat diffuseMaterial[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	GLfloat ambientMaterial[] = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -188,39 +187,39 @@ void light_default() {
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 
-	// depth test enable
+	/* depth test enable */
 	glEnable(GL_DEPTH_TEST);
 	glFrontFace(GL_CW);	
 }
 
 void init() {
-	// clear background color
+	/* clear color */
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glColor3f(1.0f, 1.0f, 1.0f);
 
-	// set blend
+	/* set blend */
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_BLEND);
 
-	// set antialiasing
+	/* set antialiasing */
 	glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
 	glEnable(GL_POLYGON_SMOOTH);
 	glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
 	glEnable(GL_LINE_SMOOTH);
 
-	// set light
+	/* set light */
 	light_default();
 
-	// texture mapping set
+	/* texture mapping set */
 	glEnable(GL_TEXTURE_2D);
 	gluQuadricTexture(qobj, GL_TRUE);
-	setEnvironmentMap();
-	setTextureMapping();
-	cubeTextureMapping();
-	cylinderTextureMapping();
-	sphereTextureMapping();
+	setEnvironmentMap(); // background
+	setTextureMapping(); // ironman obj
+	cubeTextureMapping(); // smartgun mode
+	cylinderTextureMapping(); // smartgun mode
+	sphereTextureMapping(); // smartgun mode
 
-	// print instuction
+	/* print instuction */
 	printInstruction();
 }
 
@@ -233,18 +232,18 @@ void resize(int width, int height) {
 }
 
 void idle() {
-	if (assemble == 1) {
-		a = a + 0.015;
-		if (a >= 6) {
-			a = 6;
+	if (assemble == 1) { // obj assemble
+		a = a + 0.02;
+		if (a >= 10) {
+			a = 10;
 		}
 	}
-	if (houseparty == 1) {
-		h[0] = h[0] + 0.6;
+	if (houseparty == 1) { // house party protocol
+		h[0] = h[0] + 0.6; 
 		if (h[0] >= 20) {
 			h[0] = 20;
 		}
-		h[1] = h[1] + 0.45;
+		h[1] = h[1] + 0.45; 
 		if (h[1] >= 20) {
 			h[1] = 20;
 		}	
@@ -261,8 +260,8 @@ void idle() {
 			h[4] = 25;
 		}
 	}
-	if (repulsorbeam == 1) {
-		r = r + 1;
+	if (repulsorbeam == 1) { // repulsor beam
+		r = r + 1; // rotation angle
 		if (r >= 90) {
 			r = 90;
 		}
@@ -272,61 +271,61 @@ void idle() {
 
 void setTextureMapping() {
 	int imgWidth, imgHeight, channels;
-	uchar* img = readImageData("img/gold.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img = readImageData("img/gold.bmp", &imgWidth, &imgHeight, &channels); // gold
 	glGenTextures(1, &goldtexture);
 	glBindTexture(GL_TEXTURE_2D, goldtexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); 
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	img = readImageData("img/silver.bmp", &imgWidth, &imgHeight, &channels);
+	img = readImageData("img/silver.bmp", &imgWidth, &imgHeight, &channels); // silver
 	glGenTextures(1, &silvertexture);
 	glBindTexture(GL_TEXTURE_2D, silvertexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	img = readImageData("img/white.bmp", &imgWidth, &imgHeight, &channels);
+	img = readImageData("img/white.bmp", &imgWidth, &imgHeight, &channels); // white
 	glGenTextures(1, &whitetexture);
 	glBindTexture(GL_TEXTURE_2D, whitetexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	img = readImageData("img/red.bmp", &imgWidth, &imgHeight, &channels);
+	img = readImageData("img/red.bmp", &imgWidth, &imgHeight, &channels); // red
 	glGenTextures(1, &redtexture);
 	glBindTexture(GL_TEXTURE_2D, redtexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	img = readImageData("img/pink.bmp", &imgWidth, &imgHeight, &channels);
+	img = readImageData("img/pink.bmp", &imgWidth, &imgHeight, &channels); // pink
 	glGenTextures(1, &pinktexture);
 	glBindTexture(GL_TEXTURE_2D, pinktexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	img = readImageData("img/blue.bmp", &imgWidth, &imgHeight, &channels);
+	img = readImageData("img/blue.bmp", &imgWidth, &imgHeight, &channels); // blue
 	glGenTextures(1, &bluetexture);
 	glBindTexture(GL_TEXTURE_2D, bluetexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -335,6 +334,7 @@ void setTextureMapping() {
 
 void setEnvironmentMap() {
 	int imgWidth, imgHeight, channels;
+	/* hall of armor */
 	uchar* img0 = readImageData("img/lefthall.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img1 = readImageData("img/righthall.bmp", &imgWidth, &imgHeight, &channels);
 	uchar* img2 = readImageData("img/black.bmp", &imgWidth, &imgHeight, &channels);
@@ -358,6 +358,7 @@ void setEnvironmentMap() {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
+	/* ocean */
 	img0 = readImageData("img/1024px.bmp", &imgWidth, &imgHeight, &channels);
 	img1 = readImageData("img/1024nx.bmp", &imgWidth, &imgHeight, &channels);
 	img2 = readImageData("img/1024py.bmp", &imgWidth, &imgHeight, &channels);
@@ -381,6 +382,7 @@ void setEnvironmentMap() {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
+	/* universe */
 	img0 = readImageData("img/universe.bmp", &imgWidth, &imgHeight, &channels);
 
 	glGenTextures(1, &universeCubeTex);
@@ -409,7 +411,7 @@ void setEnvironmentMap() {
 	glEnable(GL_TEXTURE_CUBE_MAP);
 }
 
-void cubeTextureMapping() {
+void cubeTextureMapping() { // smart gun mode - cube texture
 	glGenTextures(6, cubeTex);
 	int imgWidth, imgHeight, channels;
 	for (int i = 0; i < 6; i++) {
@@ -426,7 +428,7 @@ void cubeTextureMapping() {
 	}
 }
 
-void cylinderTextureMapping() {
+void cylinderTextureMapping() { // smart gun mode - cylinder texture
 	glGenTextures(3, cylinderTex);
 
 	glBindTexture(GL_TEXTURE_2D, cylinderTex[0]);
@@ -455,7 +457,7 @@ void cylinderTextureMapping() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 }
 
-void sphereTextureMapping() {
+void sphereTextureMapping() { // smart gun mode
 	glGenTextures(1, sphereTex);
 	glBindTexture(GL_TEXTURE_2D, *sphereTex);
 	int width, height, channels;
@@ -467,7 +469,7 @@ void sphereTextureMapping() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 }
 
-void draw_textureCube() {
+void draw_textureCube() { // smart gun mode - draw cube
 	glColor3f(1.0, 1.0, 1.0);
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
@@ -526,7 +528,7 @@ void draw_textureCube() {
 	glEnd();
 }
 
-void draw_Cylinder() {
+void draw_Cylinder() { // smart gun mode - draw cylinder
 	glColor3f(1.0, 1.0, 1.0);
 
 	/* 윗면 - Disk */
@@ -554,7 +556,7 @@ void draw_Cylinder() {
 	glPopMatrix();
 }
 
-void draw_Sphere() {
+void draw_Sphere() { // smart gun mode - draw sphere
 	glColor3f(1.0, 1.0, 1.0);
 	glBindTexture(GL_TEXTURE_2D, *sphereTex);
 	glRotatef(-90, 1, 0, 0);
@@ -562,9 +564,9 @@ void draw_Sphere() {
 	glRotatef(90, 1, 0, 0);
 }
 
-void draw_obj(ObjParser* objParser, GLuint texture) {
+void draw_obj(ObjParser* objParser, GLuint texture) { // draw ironman obj
 	glDisable(GL_BLEND);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glBindTexture(GL_TEXTURE_2D, texture); // bind texture
 	glBegin(GL_TRIANGLES);
 	for (unsigned int n = 0; n < objParser->getFaceSize(); n += 3) {
 		glNormal3f(objParser->normal[objParser->normalIdx[n] - 1].x,
@@ -596,232 +598,233 @@ void draw_ironman() {
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 
-	if (individual == 0) {
-		if (assemble == 1) {
+	if (individual == 0) { // indiviual == 0 -> the whole ironman obj
+		if (assemble == 1) { // assemble == 1 -> translate
 			glPushMatrix();
-			glTranslatef(0, 0, 6 - a);
+			glTranslatef(0, 0, 10 - a); // face translate
 		}
-		draw_obj(face, goldtexture);
-		if (assemble == 1) {
+		draw_obj(face, goldtexture); // draw face with gold texture
+		if (assemble == 1) {  // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(-6 + a, 0, 0);
+			glTranslatef(-10 + a, 0, 0); // arm1goldleft translate
 		}
-		draw_obj(arm1goldleft, goldtexture);
-		if (assemble == 1) {
+		draw_obj(arm1goldleft, goldtexture); // draw arm1goldleft with gold texture
+		if (assemble == 1) {  // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(6 - a, 0, 0);
+			glTranslatef(10 - a, 0, 0); // arm1goldright translate
 		} 
-		if (repulsorbeam == 1) {
-			glPushMatrix();
-			glRotatef(-r, 1, 0, 0);
+		if (repulsorbeam == 1) { // repulsorbeam == 1 -> rotate
+			glPushMatrix(); 
+			glRotatef(-r, 1, 0, 0); // arm1goldright rotate
 			glTranslatef(0, -0.6, 1.4);
 		}
-		draw_obj(arm1goldright, goldtexture);
-		if (repulsorbeam == 1) {
+		draw_obj(arm1goldright, goldtexture); // draw arm1goldright with gold texture
+		if (repulsorbeam == 1) { // if repulsor beam is on
 			glPopMatrix();
 		}
-		if (assemble == 1) {
+		if (assemble == 1) {  // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(-6 + a, -6 + a, 0);
+			glTranslatef(-10 + a, -10 + a, 0); // arm2left translate
 		}
-		draw_obj(arm2left, goldtexture);
-		if (assemble == 1) {
+		if (color == 0) draw_obj(arm2left, redtexture); // draw arm2left with red texture if color == 0
+		else if (color == 10) draw_obj(arm2left, pinktexture); // draw arm2left with pink texture if color == 10
+		else if (color == 11) draw_obj(arm2left, bluetexture); // draw arm2left with blue texture if color == 11
+		if (assemble == 1) {  // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(6 - a, -6 + a, 0);
+			glTranslatef(10 - a, -10 + a, 0); // arm2right translate
 		}
-		if (assemble == 1) {
-			glPopMatrix();
+		if (repulsorbeam == 1) { // if repulsor beam is on
 			glPushMatrix();
-			glTranslatef(0, 0, 6 - a);
-		}
-		if (repulsorbeam == 1) {
-			glPushMatrix();
-			glRotatef(-r, 1, 0, 0);
+			glRotatef(-r, 1, 0, 0); // arm2right rotate
 			glTranslatef(-0.1, -0.6, 1.4);
 		}
-		draw_obj(arm2right, goldtexture);
-		if (repulsorbeam == 1) {
+		if (color == 0) draw_obj(arm2right, redtexture); // draw arm2right with red texture if color == 0
+		else if (color == 10) draw_obj(arm2right, pinktexture); // draw arm2right with pink texture if color == 10
+		else if (color == 11) draw_obj(arm2right, bluetexture); // draw arm2right with blue texture if color == 11
+		if (repulsorbeam == 1) { // if repulsor beam is on
 			glPopMatrix();
 		}
-		if (assemble == 1) {
-			glPopMatrix();
-			glPushMatrix();
-			glTranslatef(0, -6 + a, 0);
-		}
-		draw_obj(leg1gold, goldtexture);
-		if (assemble == 1) {
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 6 - a, 0);
+			glTranslatef(0, -10 + a, 0); // leg1gold translate
 		}
-		if (color == 0) draw_obj(helmet, redtexture);
-		else if(color == 10) draw_obj(helmet, pinktexture);
-		else if(color == 11) draw_obj(helmet, bluetexture);
+		draw_obj(leg1gold, goldtexture); // draw leg1gold with gold texture
+		if (assemble == 1) { // if assemble is on
+			glPopMatrix();
+			glPushMatrix();
+			glTranslatef(0, 10 - a, 0); // helmet translate
+		}
+		if (color == 0) draw_obj(helmet, redtexture); // draw helmet with red texture if color == 0
+		else if(color == 10) draw_obj(helmet, pinktexture); // draw helmet with pink texture if color == 10
+		else if(color == 11) draw_obj(helmet, bluetexture); // draw helmet with blue texture if color == 11
 
-		if (assemble == 1) {
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, -6 + a);
+			glTranslatef(0, 0, -10 + a); // body translate
 		}
-		if (color == 0) draw_obj(body, redtexture);
-		else if (color == 10) draw_obj(body, pinktexture);
-		else if (color == 11) draw_obj(body, bluetexture);
+		if (color == 0) draw_obj(body, redtexture); // draw body with red texture if color == 0
+		else if (color == 10) draw_obj(body, pinktexture); // draw body with pink texture if color == 10
+		else if (color == 11) draw_obj(body, bluetexture); // draw body with blue texture if color == 11
 
-		if (assemble == 1) {
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, 6 - a);
+			glTranslatef(0, 0, 10 - a); // arm1redleft translate
 		} 
-		if (color == 0) draw_obj(arm1redleft, redtexture);
-		else if (color == 10) draw_obj(arm1redleft, pinktexture);
-		else if (color == 11) draw_obj(arm1redleft, bluetexture);
-		if (assemble == 1) {
+		if (color == 0) draw_obj(arm1redleft, redtexture); // draw arm1redleft with red texture if color == 0
+		else if (color == 10) draw_obj(arm1redleft, pinktexture); // draw arm1redleft with pink texture if color == 10
+		else if (color == 11) draw_obj(arm1redleft, bluetexture); // draw arm1redleft with blue texture if color == 11
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, 6 - a);
+			glTranslatef(0, 0, 10 - a); // arm1redright translate
 		}
-		if (repulsorbeam == 1) {
+		if (repulsorbeam == 1) { // if repulsor beam is on
 			glPushMatrix();
-			glRotatef(-r, 1, 0, 0);
+			glRotatef(-r, 1, 0, 0); // arm1redright rotate
 			glTranslatef(0, -0.6, 1.4);
 		}
-		if (color == 0) draw_obj(arm1redright, redtexture);
-		else if (color == 10) draw_obj(arm1redright, pinktexture);
-		else if (color == 11) draw_obj(arm1redright, bluetexture);
-		if (repulsorbeam == 1) {
+		if (color == 0) draw_obj(arm1redright, redtexture); // draw arm1redright with red texture if color == 0
+		else if (color == 10) draw_obj(arm1redright, pinktexture); // draw arm1redright with pink texture if color == 10
+		else if (color == 11) draw_obj(arm1redright, bluetexture); // draw arm1redright with blue texture if color == 11
+		if (repulsorbeam == 1) { // if repulsor beam is on
 			glPopMatrix();
 		}
-		if (assemble == 1) {
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(-6 + a, 0, -6 + a);
+			glTranslatef(-10 + a, 0, -10 + a); // handleft translate
 		}
-		if (color == 0) draw_obj(handleft, redtexture);
-		else if (color == 10) draw_obj(handleft, pinktexture);
-		else if (color == 11) draw_obj(handleft, bluetexture);
-		if (assemble == 1) {
-			glPopMatrix();
+		if (color == 0) draw_obj(handleft, redtexture); // draw handleft with red texture if color == 0
+		else if (color == 10) draw_obj(handleft, pinktexture); // draw handleft with pink texture if color == 10
+		else if (color == 11) draw_obj(handleft, bluetexture); // draw handleft with blue texture if color == 11
+		if (assemble == 1) { // if assemble is on
+			glPopMatrix(); 
 			glPushMatrix();
-			glTranslatef(6 - a, 0, -6 + a);
+			glTranslatef(10 - a, 0, -10 + a); // handright2 translate
 		}
-		if (repulsorbeam == 1) {
+		if (repulsorbeam == 1) { // if repulsor beam is on
 			glPushMatrix();
-			glRotatef(80-r, 1, 0, 0);
+			glRotatef(80-r, 1, 0, 0); // handright2 rotate
 			glTranslatef(0, 0, -0.6);
-			if (color == 0) draw_obj(handright2, redtexture);
-			else if (color == 10) draw_obj(handright2, pinktexture);
-			else if (color == 11) draw_obj(handright2, bluetexture);
+			if (color == 0) draw_obj(handright2, redtexture); // draw handright2 with red texture if color == 0
+			else if (color == 10) draw_obj(handright2, pinktexture); // draw handright2 with pink texture if color == 10
+			else if (color == 11) draw_obj(handright2, bluetexture); // draw handright2 with blue texture if color == 11
 			glPopMatrix();
 			glPushMatrix();
 		}
-		else {
-			if (color == 0) draw_obj(handright, redtexture);
-			else if (color == 10) draw_obj(handright, pinktexture);
-			else if (color == 11) draw_obj(handright, bluetexture);
+		else { // if repulsor beam is off
+			if (color == 0) draw_obj(handright, redtexture); // draw handright with red texture if color == 0
+			else if (color == 10) draw_obj(handright, pinktexture); // draw handright with pink texture if color == 10
+			else if (color == 11) draw_obj(handright, bluetexture);  // draw handright with blue texture if color == 11
 		}
 
-		if (assemble == 1) {
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(6 - a, 0, 6 - a);
+			glTranslatef(10 - a, 0, 10 - a); // leg1red translate
 		}
-		if (color == 0) draw_obj(leg1red, redtexture);
-		else if (color == 10) draw_obj(leg1red, pinktexture);
-		else if (color == 11) draw_obj(leg1red, bluetexture);
+		if (color == 0) draw_obj(leg1red, redtexture);  // draw leg1red with red texture if color == 0
+		else if (color == 10) draw_obj(leg1red, pinktexture); // draw leg1red with pink texture if color == 10
+		else if (color == 11) draw_obj(leg1red, bluetexture); // draw leg1red with blue texture if color == 11
 
-		if (assemble == 1) {
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(-6 + a, 0, 6 - a);
+			glTranslatef(-10 + a, 0, 10 - a); // leg2 translate 
 		}
-		if (color == 0) draw_obj(leg2, redtexture);
-		else if (color == 10) draw_obj(leg2, pinktexture);
-		else if (color == 11) draw_obj(leg2, bluetexture);
+		if (color == 0) draw_obj(leg2, redtexture); // draw leg2 with red texture if color == 0
+		else if (color == 10) draw_obj(leg2, pinktexture); // draw leg2 with pink texture if color == 10
+		else if (color == 11) draw_obj(leg2, bluetexture); // draw leg2 with blue texture if color == 11
 
-		if (assemble == 1) {
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(6 - a, 6 - a, 6 - a);
+			glTranslatef(10 - a, 10 - a, 10 - a); // arc translate
 		}
-		draw_obj(arc, whitetexture);
+		draw_obj(arc, whitetexture); // draw arc with white texture
 
-		if (assemble == 1) {
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(6 - a, 0, -6 + a);
+			glTranslatef(10 - a, 0, -10 + a); // handarcleft translate
 		}
-		draw_obj(handarcleft, silvertexture);
-		if (repulsorbeam == 1) {
+		draw_obj(handarcleft, silvertexture); // draw handarcleft with silver texture
+		if (repulsorbeam == 1) { // if repulsor beam is off
 			glPushMatrix();
-			glRotatef(80 - r, 1, 0, 0);
+			glRotatef(80 - r, 1, 0, 0); // handarcright2 rotate
 			glTranslatef(0, 0, -0.6);
-			draw_obj(handarcright2, whitetexture);
+			draw_obj(handarcright2, whitetexture); // draw handarcright2 with white texture
 			glPopMatrix();
 		} 
-		else {
-			draw_obj(handarcright, silvertexture);
+		else { // if repulsor beam is off
+			draw_obj(handarcright, silvertexture); // draw handarcright with silver texture
 		}
 	
-		if (assemble == 1) {
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(0, 0, 6 - a);
+			glTranslatef(0, 0, 10 - a); // footarc translate
 		}
-		draw_obj(footarc, silvertexture);
-		draw_obj(sil, silvertexture);
+		draw_obj(footarc, silvertexture); // draw footarc with silver texture
+		draw_obj(sil, silvertexture); // draw sil with silver texture 
 
-		if (assemble == 1) {
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 			glPushMatrix();
-			glTranslatef(-6 + a, 6 - a, 0);
+			glTranslatef(-10 + a, 10 - a, 0); // gun translate
 		}
-		draw_obj(gun, silvertexture);
-		if (assemble == 1) {
+		draw_obj(gun, silvertexture); // draw gun with silver texture
+		if (assemble == 1) { // if assemble is on
 			glPopMatrix();
 		}
 	}
-	else if (individual == 30) {
+	else if (individual == 30) { // individual - face
 		draw_obj(face, goldtexture);
 	}
-	else if (individual == 31) {
+	else if (individual == 31) { // individual - helmet 
 		if (color == 0) draw_obj(helmet, redtexture);
 		else if (color == 10) draw_obj(helmet, pinktexture);
 		else if (color == 11) draw_obj(helmet, bluetexture);
 	}
-	else if (individual == 32) {
+	else if (individual == 32) { // individual - body
 		if (color == 0) draw_obj(body, redtexture);
 		else if (color == 10) draw_obj(body, pinktexture);
 		else if (color == 11) draw_obj(body, bluetexture);
 		draw_obj(arc, silvertexture);
 		draw_obj(gun, silvertexture);
 	}
-	else if (individual == 33) {
+	else if (individual == 33) { // individual - arm1
 		draw_obj(arm1gold, goldtexture);
 
 		if (color == 0) draw_obj(arm1red, redtexture);
 		else if (color == 10) draw_obj(arm1red, pinktexture);
 		else if (color == 11) draw_obj(arm1red, bluetexture);
 	}
-	else if (individual == 34) {
-		draw_obj(arm2, goldtexture);
+	else if (individual == 34) { // individual - arm2
+		if (color == 0) draw_obj(arm2, redtexture);
+		else if (color == 10) draw_obj(arm2, pinktexture);
+		else if (color == 11) draw_obj(arm2, bluetexture);
 	}
-	else if (individual == 35) {
+	else if (individual == 35) { // individual - hand, handarc
 		if (color == 0) draw_obj(hand, redtexture);
 		else if (color == 10) draw_obj(hand, pinktexture);
 		else if (color == 11) draw_obj(hand, bluetexture);
 		draw_obj(handarc, silvertexture);
 	}
-	else if (individual == 36) {
+	else if (individual == 36) { // individual - leg1
 		draw_obj(leg1gold, goldtexture);
 		if (color == 0) draw_obj(leg1red, redtexture);
 		else if (color == 10) draw_obj(leg1red, pinktexture);
 		else if (color == 11) draw_obj(leg1red, bluetexture);
 	}
-	else if (individual == 37) {
+	else if (individual == 37) { // individual - leg2, footarc, sil
 		if (color == 0) draw_obj(leg2, redtexture);
 		else if (color == 10) draw_obj(leg2, pinktexture);
 		else if (color == 11) draw_obj(leg2, bluetexture);
@@ -834,7 +837,7 @@ void draw_skyBox(GLuint texture) {
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glDisable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_CUBE_MAP);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture); // bind texture
 	float g_nSkysize = 200;
 	glBegin(GL_QUADS);
 	//px
@@ -897,7 +900,7 @@ void housepartyProtocol() {
 	draw_ironman();
 	glPopMatrix();
 	
-	// bottom left
+	// bottom left 
 	glPushMatrix();
 	glRotatef(15.0f, 0.0f, 1.0f, 0.0f);
 	glTranslatef(-5, 0, -20 + h[0]);
@@ -995,7 +998,7 @@ void housepartyProtocol() {
 
 void smartGun() {
 	glEnable(GL_TEXTURE_2D);
-	if (score[0] != 0) { // cube
+	if (heart[0] != 0) { // cube
 		glPushMatrix();
 		glTranslatef(5, 0, 11);
 		glColor3f(1, 1, 1);
@@ -1004,8 +1007,8 @@ void smartGun() {
 
 		glDisable(GL_TEXTURE_2D);		
 		glPushMatrix();
-		glTranslatef(6.2, 2.1, 11);
-		for (int i = 0; i < score[0]; i++) {
+		glTranslatef(6.2, 2.1, 11); // heart
+		for (int i = 0; i < heart[0]; i++) {
 			glColor3f(1, 0, 0);
 			glutSolidSphere(0.2, 30, 30);
 			glTranslatef(-0.6, 0, 0);
@@ -1013,7 +1016,7 @@ void smartGun() {
 		glPopMatrix();
 	}
 	glEnable(GL_TEXTURE_2D);
-	if (score[1] != 0) { // sphere
+	if (heart[1] != 0) { // sphere
 		glPushMatrix();
 		glTranslatef(0, 0, 21);
 		glColor3f(1, 1, 1);
@@ -1022,8 +1025,8 @@ void smartGun() {
 
 		glDisable(GL_TEXTURE_2D);
 		glPushMatrix();
-		glTranslatef(1.2, 3.8, 13);
-		for (int i = 0; i < score[1]; i++) {
+		glTranslatef(1.2, 3.8, 13); // heart
+		for (int i = 0; i < heart[1]; i++) {
 			glColor3f(1, 0, 0);
 			glutSolidSphere(0.2, 30, 30);
 			glTranslatef(-0.6, 0, 0);
@@ -1031,7 +1034,7 @@ void smartGun() {
 		glPopMatrix();
 	}
 	glEnable(GL_TEXTURE_2D);
-	if (score[2] != 0) { // cylinder
+	if (heart[2] != 0) { // cylinder
 		glPushMatrix();
 		glTranslatef(-5, 0, 15);
 		glColor3f(1, 1, 1);
@@ -1040,8 +1043,8 @@ void smartGun() {
 
 		glDisable(GL_TEXTURE_2D);
 		glPushMatrix();
-		glTranslatef(-5, 2.6, 13);
-		for (int i = 0; i < score[2]; i++) {
+		glTranslatef(-5, 2.6, 13); // heart
+		for (int i = 0; i < heart[2]; i++) {
 			glColor3f(1, 0, 0);
 			glutSolidSphere(0.2, 30, 30);
 			glTranslatef(-0.6, 0, 0);
@@ -1061,26 +1064,26 @@ void draw() {
 	cam[2] = radius * sin(theta * M_PI / 180) * cos(phi * M_PI / 180);
 	gluLookAt(cam[0], cam[1], cam[2], center[0], center[1], center[2], up[0], up[1], up[2]);
 
-	if (smartgun == 1) {
+	if (smartgun == 1) { // smartgun mode
 		smartGun();
 	}
 
-	if (background == 0) {
+	if (background == 0) { // background : universe
 		draw_skyBox(universeCubeTex);
 	}
-	else if (background == 1) {
+	else if (background == 1) { // hall of armor
 		draw_skyBox(hallCubeTex);
 	} 
-	else if (background == 2) {
+	else if (background == 2) { // ocean
 		draw_skyBox(oceanCubeTex);
 	}
 
-	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_S); // ironman's mirror affect off
 	glDisable(GL_TEXTURE_GEN_T);
 	glDisable(GL_TEXTURE_GEN_R);
 	glDisable(GL_TEXTURE_CUBE_MAP);
 
-	if (houseparty == 1 && smartgun == 0) {
+	if (houseparty == 1) { // house party mode
 		housepartyProtocol();
 	}
 	else {
@@ -1088,41 +1091,34 @@ void draw() {
 		draw_ironman();
 	}
 
-	if (smartgun == 1) {
-		smartGun();
-	}
-
-	//GetCursorPos(&ptMouse);
-	//printf("[윈도우 기준] X: %04d, Y: %04d", ptMouse.x, ptMouse.y);
-	
 	glFlush();
 	glutSwapBuffers();
 }
 
 void keyboard(unsigned char key, int x, int y) {
-	if (key == 'R' || key == 'r') {
+	if (key == 'R' || key == 'r') { // repulsor beam mode
 		printf("Repulsor Beam mode has been selected\n");
-		if (repulsorbeam == 0) {
+		if (repulsorbeam == 0) { // off -> on
 			smartgun = 0;
 			repulsorbeam = 1;
 			PlaySound("sound/repulsor.wav", 0, SND_FILENAME | SND_ASYNC);
 		}
-		else {
+		else { // on -> off
 			repulsorbeam = 0;
 			r = 0;
 		}
 	}
-	else if (key == 'S' || key == 's') {
+	else if (key == 'S' || key == 's') { // smart gun mode
 		printf("Smart Gun mode has been selected\n");
-		if (smartgun == 0) {
-			repulsorbeam = 0; houseparty = 0;
+		if (smartgun == 0) { // off -> on
+			repulsorbeam = 0; houseparty = 0; 
 			smartgun = 1;
 			radius = 8;
 			theta = 50;
 			phi = 180;
 			center[1] = 4;
 		}
-		else {
+		else { // on -> off
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 			smartgun = 0;
 			radius = 11;
@@ -1131,21 +1127,23 @@ void keyboard(unsigned char key, int x, int y) {
 			center[1] = 0;
 		}
 	}
-	else if (key == 'H' || key == 'h') {
+	else if (key == 'H' || key == 'h') { // house party protocol mode
 		printf("House Party Protocol has been selected\n");
-		if (houseparty == 0) {
+		if (houseparty == 0) { // off -> on
+			smartgun = 0; 
 			houseparty = 1;
+			PlaySound("sound/move.wav", 0, SND_FILENAME | SND_ASYNC);
+			
 		}
-		else {
+		else { // on -> off
 			houseparty = 0;
 			h[0] = 0; h[1] = 0; h[2] = 0; h[3] = 0; h[4] = 0;
 		}
 	}
-
 	glutPostRedisplay();
 }
 
-void specialkeyboard(int key, int x, int y) {
+void specialkeyboard(int key, int x, int y) { // move camera position
 	if (smartgun == 0) {
 		if (key == GLUT_KEY_LEFT) {
 			phi -= 2.5;
@@ -1161,73 +1159,67 @@ void specialkeyboard(int key, int x, int y) {
 		else if (key == GLUT_KEY_DOWN) {
 			if (theta < 170) theta += 2.5;
 		}
-		glutPostRedisplay();
 	}
+	glutPostRedisplay();
 }
 
 void mouse(int button, int state, int x, int y) {
-	if (smartgun == 1) {
-		if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-			printf("x: %d, y: %d\n", x, y);
-			if (x > 98 && x < 156 && y > 270 && y < 328 && score[0] > 0) {
-				score[0]--; // cube
+	if (smartgun == 1) { // when smart gun mode is on
+		if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) { // shoot
+			//printf("x: %d, y: %d\n", x, y);
+			if (x > 385 && x < 470 && y > 378 && y < 457 && heart[0] > 0) {
+				heart[0]--; // cube
 			}
-			if (x > 222 && x < 275 && y > 222 && y < 275 && score[1] > 0) {
-				score[1]--; // sphere
+			if (x > 561 && x < 634 && y > 318 && y < 388 && heart[1] > 0) {
+				heart[1]--; // sphere
 			}
-			if (x > 368 && x < 410 && y > 255 && y < 315 && score[2] > 0) {
-				score[2]--; // cylinder
+			if (x > 765 && x < 822 && y > 356 && y < 437 && heart[2] > 0) {
+				heart[2]--; // cylinder
 			}
 			PlaySound("sound/gun.wav", 0, SND_FILENAME | SND_ASYNC);
-			
-			/*
-			glPushMatrix();
-			glColor3f(1, 0, 0);
-			glTranslatef(x, y, 0);
-			glutSolidSphere(15, 30, 30);
-			glColor3f(1, 1, 1);
-			glPopMatrix();
-			*/
 		}
 		glutPostRedisplay();
 	}
 }
 
-void mouseWheel(int button, int dir, int x, int y) {
-	if (smartgun == 0) {
+void mouseWheel(int button, int dir, int x, int y) { 
+	if (smartgun == 0) { // when smart gun mode is off
 		if (dir > 0) {
-			if (radius > 2) radius--;
+			if (radius > 2) radius--; // zoom in
 		}
 		else {
-			if (radius < 100) radius++;
+			if (radius < 100) radius++; // zoom out
 		}
 		glutPostRedisplay();
 	}
 }
 
 void main_menu(int option) {
-	if (option == 99) exit(0);
-	else if (option == 1) {
+	if (option == 99) exit(0); // exit
+	else if (option == 1) { // init
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		radius = 11; theta = 80; phi = 1; center[1] = 0;
-		assemble = 0;
-		a = 0;
-		individual = 0;
-		color = 0; 
-		background = 0;
-		houseparty = 0;
+		individual = 0; // individual
+		color = 0; // color
+		background = 0; // background
+		// assemble variable
+		assemble = 0; a = 0;
+		// house party variable
+		houseparty = 0; 
 		h[0] = 0; h[1] = 0; h[2] = 0; h[3] = 0; h[4] = 0;
+		// smart gun variable
 		smartgun = 0;
+		radius = 11; theta = 80; phi = 1; center[1] = 0;
+		heart[0] = 5; heart[1] = 5; heart[2] = 5;
+		// repulsor variable
 		repulsorbeam = 0; r = 0;
-		score[0] = 5; score[1] = 5; score[2] = 5;
 		printf("Init has been selected\n");
 	}
-	else if (option == 2) {
-		if (assemble == 0) {
+	else if (option == 2) { // assemble 
+		if (assemble == 0) { // off -> on
 			assemble = 1;
 			PlaySound("sound/move.wav", 0, SND_FILENAME | SND_ASYNC);
 		}
-		else {
+		else { // on -> off
 			assemble = 0;
 			a = 0;
 		}
@@ -1236,68 +1228,68 @@ void main_menu(int option) {
 	glutPostRedisplay();
 }
 
-void sub_menu1(int option) {
-	if (option == 0) {
+void sub_menu1(int option) { // color 
+	if (option == 0) { // red
 		color = 0;
 		printf("Red has been selected\n");
 	}
-	if (option == 10) {
+	if (option == 10) { // pink
 		color = 10;
 		printf("Pink has been selected\n");
 	}
-	else if (option == 11) {
+	else if (option == 11) { // blue
 		color = 11;
 		printf("Blue has been selected\n");
 	}
 	glutPostRedisplay();
 }
 
-void sub_menu2(int option) {
-	if (option == 20) {
+void sub_menu2(int option) { // background 
+	if (option == 20) { // universe
 		background = 0;
 		printf("Universe has been selected\n");
 	}
-	if (option == 21) {
+	if (option == 21) { // hall of armor
 		background = 1;
 		printf("Hall of armor has been selected\n");
 	}
-	else if (option == 22) {
+	else if (option == 22) { // ocean
 		background = 2;
 		printf("Ocean has been selected\n");
 	} 
 	glutPostRedisplay();
 }
 
-void sub_menu3(int option) {
-	if (option == 30) {
+void sub_menu3(int option) { // individual
+	if (option == 30) { // face
 		individual = 30;
 		printf("Face has been selected\n");
 	}
-	else if (option == 31) {
+	else if (option == 31) { // helmet
 		individual = 31;
 		printf("Helmet has been selected\n");
 	}
-	else if (option == 32) {
+	else if (option == 32) { // body
 		individual = 32;
 		printf("Body has been selected\n");
 	}
-	else if (option == 33) {
+	else if (option == 33) { // upper arm
 		individual = 33;
 		printf("Upper Arm has been selected\n");
 	}
-	else if (option == 34) {
+	else if (option == 34) { // under arm
 		individual = 34;
 		printf("Under Arm has been selected\n");
 	}
-	else if (option == 35) {
+	else if (option == 35) { // hand
 		individual = 35;
 		printf("Hand has been selected\n");
 	}
-	else if (option == 36) {
+	else if (option == 36) { // upper leg
 		individual = 36;
 		printf("Upper Leg has been selected\n");
 	}
-	else if (option == 37) {
+	else if (option == 37) { // under leg
 		individual = 37;
 		printf("Under Leg has been selected\n");
 	}
@@ -1312,12 +1304,12 @@ void printInstruction() {
 	printf("H/h : House Party Protocol\n");	
 	printf("방향키 : camera 위치\n");
 
-	printf("\n-----------Mouse Navigation-----------\n");
+	printf("\n-------------Mouse Navigation------------\n");
 	printf("Left Button : Shoot in Smart Gun mode\n");
 	printf("Right Button : Menu\n");
 	printf("Mouse Wheel : Zoom in&out\n");
 
-	printf("\n-----------Menu Navigation-----------\n");
+	printf("\n-------------Menu Navigation-------------\n");
 	printf("Init\n");
 	printf("Color(red, pink, blue)\n");
 	printf("Background(hall of armor, ocean, universe\n");
